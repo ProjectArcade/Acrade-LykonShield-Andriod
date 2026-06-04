@@ -19,11 +19,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Settings
+
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -251,7 +247,7 @@ class MainActivity : ComponentActivity() {
                                     val isSelected = selectedTabIndex == 0
                                     val iconColor = if (isSelected) (if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)) else Color(0xFF8E8E93)
                                     Icon(
-                                        imageVector = if (isSelected) Icons.Filled.Home else Icons.Outlined.Home,
+                                        imageVector = if (isSelected) SFHouseFilledIcon else SFHouseIcon,
                                         contentDescription = "Home",
                                         tint = iconColor
                                     )
@@ -279,7 +275,7 @@ class MainActivity : ComponentActivity() {
                                     val isSelected = selectedTabIndex == 2
                                     val iconColor = if (isSelected) (if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)) else Color(0xFF8E8E93)
                                     Icon(
-                                        imageVector = if (isSelected) Icons.Filled.Settings else Icons.Outlined.Settings,
+                                        imageVector = if (isSelected) SFGearshapeFilledIcon else SFGearshapeIcon,
                                         contentDescription = "Settings",
                                         tint = iconColor
                                     )
@@ -346,45 +342,274 @@ fun rememberLazyListScrollOffset(state: LazyListState): Float {
     }.value
 }
 
-val ShieldIcon: ImageVector
+// ─── iOS SF Symbols-style Icons ───────────────────────────────────────────────
+
+// SF Symbol: house (outlined)
+val SFHouseIcon: ImageVector
     get() = ImageVector.Builder(
-        name = "Shield",
+        name = "SFHouse",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(
-        stroke = androidx.compose.ui.graphics.SolidColor(Color.White),
-        strokeLineWidth = 2f,
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 1.7f,
         strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
         strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
     ) {
-        moveTo(12f, 2f)
-        lineTo(4f, 5f)
-        verticalLineTo(11f)
-        curveTo(4f, 16.52f, 7.41f, 20.24f, 12f, 22f)
-        curveTo(16.59f, 20.24f, 20f, 16.52f, 20f, 11f)
-        verticalLineTo(5f)
-        lineTo(12f, 2f)
-        close()
+        // Roof
+        moveTo(3f, 10.5f)
+        lineTo(12f, 3f)
+        lineTo(21f, 10.5f)
+        // House body
+        moveTo(5f, 9.5f)
+        verticalLineTo(19f)
+        curveTo(5f, 19.55f, 5.45f, 20f, 6f, 20f)
+        horizontalLineTo(9.5f)
+        verticalLineTo(14.5f)
+        curveTo(9.5f, 14.22f, 9.72f, 14f, 10f, 14f)
+        horizontalLineTo(14f)
+        curveTo(14.28f, 14f, 14.5f, 14.22f, 14.5f, 14.5f)
+        verticalLineTo(20f)
+        horizontalLineTo(18f)
+        curveTo(18.55f, 20f, 19f, 19.55f, 19f, 19f)
+        verticalLineTo(9.5f)
     }.build()
 
-val ShieldFilledIcon: ImageVector
+// SF Symbol: house.fill
+val SFHouseFilledIcon: ImageVector
     get() = ImageVector.Builder(
-        name = "ShieldFilled",
+        name = "SFHouseFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        // Filled house body
+        path(
+            fill = androidx.compose.ui.graphics.SolidColor(Color.Black)
+        ) {
+            moveTo(5f, 10f)
+            verticalLineTo(19f)
+            curveTo(5f, 19.55f, 5.45f, 20f, 6f, 20f)
+            horizontalLineTo(9.5f)
+            verticalLineTo(14.5f)
+            curveTo(9.5f, 13.95f, 9.95f, 13.5f, 10.5f, 13.5f)
+            horizontalLineTo(13.5f)
+            curveTo(14.05f, 13.5f, 14.5f, 13.95f, 14.5f, 14.5f)
+            verticalLineTo(20f)
+            horizontalLineTo(18f)
+            curveTo(18.55f, 20f, 19f, 19.55f, 19f, 19f)
+            verticalLineTo(10f)
+            lineTo(12f, 4f)
+            close()
+        }
+        // Roof
+        path(
+            fill = androidx.compose.ui.graphics.SolidColor(Color.Black)
+        ) {
+            moveTo(12f, 2.5f)
+            lineTo(2.5f, 10.5f)
+            curveTo(2.2f, 10.75f, 2.25f, 11.2f, 2.6f, 11.4f)
+            curveTo(2.95f, 11.6f, 3.4f, 11.5f, 3.65f, 11.2f)
+            lineTo(12f, 4.2f)
+            lineTo(20.35f, 11.2f)
+            curveTo(20.6f, 11.5f, 21.05f, 11.6f, 21.4f, 11.4f)
+            curveTo(21.75f, 11.2f, 21.8f, 10.75f, 21.5f, 10.5f)
+            close()
+        }
+    }.build()
+
+// SF Symbol: shield (outlined)
+val ShieldIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "SFShield",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f
     ).path(
-        fill = androidx.compose.ui.graphics.SolidColor(Color.White)
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 1.7f,
+        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
     ) {
-        moveTo(12f, 2f)
-        lineTo(4f, 5f)
-        verticalLineTo(11f)
-        curveTo(4f, 16.52f, 7.41f, 20.24f, 12f, 22f)
-        curveTo(16.59f, 20.24f, 20f, 16.52f, 20f, 11f)
-        verticalLineTo(5f)
-        lineTo(12f, 2f)
+        moveTo(12f, 2.5f)
+        curveTo(12f, 2.5f, 5f, 4.5f, 4f, 5.5f)
+        curveTo(4f, 5.5f, 3.5f, 11f, 4.5f, 14f)
+        curveTo(5.5f, 17f, 8f, 19.5f, 12f, 21.5f)
+        curveTo(16f, 19.5f, 18.5f, 17f, 19.5f, 14f)
+        curveTo(20.5f, 11f, 20f, 5.5f, 20f, 5.5f)
+        curveTo(19f, 4.5f, 12f, 2.5f, 12f, 2.5f)
         close()
+    }.build()
+
+// SF Symbol: shield.fill
+val ShieldFilledIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "SFShieldFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        fill = androidx.compose.ui.graphics.SolidColor(Color.Black)
+    ) {
+        moveTo(12f, 2.5f)
+        curveTo(12f, 2.5f, 5f, 4.5f, 4f, 5.5f)
+        curveTo(4f, 5.5f, 3.5f, 11f, 4.5f, 14f)
+        curveTo(5.5f, 17f, 8f, 19.5f, 12f, 21.5f)
+        curveTo(16f, 19.5f, 18.5f, 17f, 19.5f, 14f)
+        curveTo(20.5f, 11f, 20f, 5.5f, 20f, 5.5f)
+        curveTo(19f, 4.5f, 12f, 2.5f, 12f, 2.5f)
+        close()
+    }.build()
+
+// SF Symbol: gearshape (outlined)
+val SFGearshapeIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "SFGearshape",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        // Gear teeth outline
+        path(
+            stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+            strokeLineWidth = 1.5f,
+            strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+            strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+        ) {
+            // Outer gear path with 8 teeth — iOS gearshape style (wider, rounded teeth)
+            moveTo(12f, 1.5f)
+            lineTo(13.4f, 1.6f)
+            lineTo(14f, 3.6f)
+            lineTo(15.8f, 4.3f)
+            lineTo(17.6f, 3.2f)
+            lineTo(18.7f, 4f)
+            lineTo(19.8f, 4.8f) // top-right adjustment
+            lineTo(18.9f, 6.8f) // was 19.2, 6.8 — pulled in for better shape
+            lineTo(19.4f, 8.6f)
+            lineTo(21.5f, 9f)
+            lineTo(21.8f, 10.4f) // top of right tooth
+            lineTo(22.0f, 12f) // center right
+            lineTo(21.8f, 13.6f)
+            lineTo(21.5f, 15f)
+            lineTo(19.4f, 15.4f)
+            lineTo(18.9f, 17.2f)
+            lineTo(19.8f, 19.2f) // was 20, 19 — adjusted
+            lineTo(18.7f, 20f)
+            lineTo(17.6f, 20.8f)
+            lineTo(15.8f, 19.7f)
+            lineTo(14f, 20.4f)
+            lineTo(13.4f, 22.4f)
+            lineTo(12f, 22.5f)
+            lineTo(10.6f, 22.4f)
+            lineTo(10f, 20.4f)
+            lineTo(8.2f, 19.7f)
+            lineTo(6.4f, 20.8f)
+            lineTo(5.3f, 20f)
+            lineTo(4.2f, 19.2f)
+            lineTo(5.1f, 17.2f)
+            lineTo(4.6f, 15.4f)
+            lineTo(2.5f, 15f)
+            lineTo(2.2f, 13.6f)
+            lineTo(2f, 12f)
+            lineTo(2.2f, 10.4f)
+            lineTo(2.5f, 9f)
+            lineTo(4.6f, 8.6f)
+            lineTo(5.1f, 6.8f)
+            lineTo(4.2f, 4.8f)
+            lineTo(5.3f, 4f)
+            lineTo(6.4f, 3.2f)
+            lineTo(8.2f, 4.3f)
+            lineTo(10f, 3.6f)
+            lineTo(10.6f, 1.6f)
+            close()
+        }
+        // Center circle
+        path(
+            stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+            strokeLineWidth = 1.5f
+        ) {
+            // Circle at center radius ~3.5
+            moveTo(15.5f, 12f)
+            curveTo(15.5f, 13.93f, 13.93f, 15.5f, 12f, 15.5f)
+            curveTo(10.07f, 15.5f, 8.5f, 13.93f, 8.5f, 12f)
+            curveTo(8.5f, 10.07f, 10.07f, 8.5f, 12f, 8.5f)
+            curveTo(13.93f, 8.5f, 15.5f, 10.07f, 15.5f, 12f)
+            close()
+        }
+    }.build()
+
+// SF Symbol: gearshape.fill
+val SFGearshapeFilledIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "SFGearshapeFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        // Single path with EvenOdd fill: outer gear + inner circle = transparent center hole
+        path(
+            fill = androidx.compose.ui.graphics.SolidColor(Color.Black),
+            pathFillType = androidx.compose.ui.graphics.PathFillType.EvenOdd
+        ) {
+            // Outer gear body
+            moveTo(12f, 1.5f)
+            lineTo(13.4f, 1.6f)
+            lineTo(14f, 3.6f)
+            lineTo(15.8f, 4.3f)
+            lineTo(17.6f, 3.2f)
+            lineTo(18.7f, 4f)
+            lineTo(19.8f, 4.8f)
+            lineTo(18.9f, 6.8f)
+            lineTo(19.4f, 8.6f)
+            lineTo(21.5f, 9f)
+            lineTo(21.8f, 10.4f)
+            lineTo(22.0f, 12f)
+            lineTo(21.8f, 13.6f)
+            lineTo(21.5f, 15f)
+            lineTo(19.4f, 15.4f)
+            lineTo(18.9f, 17.2f)
+            lineTo(19.8f, 19.2f)
+            lineTo(18.7f, 20f)
+            lineTo(17.6f, 20.8f)
+            lineTo(15.8f, 19.7f)
+            lineTo(14f, 20.4f)
+            lineTo(13.4f, 22.4f)
+            lineTo(12f, 22.5f)
+            lineTo(10.6f, 22.4f)
+            lineTo(10f, 20.4f)
+            lineTo(8.2f, 19.7f)
+            lineTo(6.4f, 20.8f)
+            lineTo(5.3f, 20f)
+            lineTo(4.2f, 19.2f)
+            lineTo(5.1f, 17.2f)
+            lineTo(4.6f, 15.4f)
+            lineTo(2.5f, 15f)
+            lineTo(2.2f, 13.6f)
+            lineTo(2f, 12f)
+            lineTo(2.2f, 10.4f)
+            lineTo(2.5f, 9f)
+            lineTo(4.6f, 8.6f)
+            lineTo(5.1f, 6.8f)
+            lineTo(4.2f, 4.8f)
+            lineTo(5.3f, 4f)
+            lineTo(6.4f, 3.2f)
+            lineTo(8.2f, 4.3f)
+            lineTo(10f, 3.6f)
+            lineTo(10.6f, 1.6f)
+            close()
+            // Inner circle cutout (EvenOdd makes this a transparent hole)
+            moveTo(15.5f, 12f)
+            curveTo(15.5f, 13.93f, 13.93f, 15.5f, 12f, 15.5f)
+            curveTo(10.07f, 15.5f, 8.5f, 13.93f, 8.5f, 12f)
+            curveTo(8.5f, 10.07f, 10.07f, 8.5f, 12f, 8.5f)
+            curveTo(13.93f, 8.5f, 15.5f, 10.07f, 15.5f, 12f)
+            close()
+        }
     }.build()
