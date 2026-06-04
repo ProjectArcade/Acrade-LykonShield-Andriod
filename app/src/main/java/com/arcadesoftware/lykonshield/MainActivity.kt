@@ -21,13 +21,13 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.Lock
 import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -65,6 +65,14 @@ class MainActivity : ComponentActivity() {
                 1 -> false
                 2 -> true
                 else -> isSystemInDarkTheme()
+            }
+            val view = androidx.compose.ui.platform.LocalView.current
+            if (!view.isInEditMode) {
+                androidx.compose.runtime.SideEffect {
+                    val window = (view.context as android.app.Activity).window
+                    androidx.core.view.WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = !isDark
+                    androidx.core.view.WindowCompat.getInsetsController(window, view).isAppearanceLightNavigationBars = !isDark
+                }
             }
             LykonShieldTheme(darkTheme = isDark, dynamicColor = false) {
                 val isLightTheme = !isDark
@@ -159,7 +167,7 @@ class MainActivity : ComponentActivity() {
                                     isProtectionEnabled = isProtectionEnabled,
                                     onProtectionToggle = { isProtectionEnabled = !isProtectionEnabled },
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
-                                    topPadding = 56.dp + statusBarPadding,
+                                    topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
                                     backdrop = backgroundBackdrop
                                 )
@@ -168,7 +176,7 @@ class MainActivity : ComponentActivity() {
                                 BlockedScreen(
                                     state = blockedState,
                                     isProtectionEnabled = isProtectionEnabled,
-                                    topPadding = 56.dp + statusBarPadding,
+                                    topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding
                                 )
                             }
@@ -179,7 +187,7 @@ class MainActivity : ComponentActivity() {
                                     onThemeClick = { showThemeDialog = true },
 //                                    onDeveloperClick = { navController.navigate("developer") },
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
-                                    topPadding = 56.dp + statusBarPadding,
+                                    topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
                                     backdrop = backgroundBackdrop
                                 )
@@ -257,7 +265,7 @@ class MainActivity : ComponentActivity() {
                                     val isSelected = selectedTabIndex == 1
                                     val iconColor = if (isSelected) (if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)) else Color(0xFF8E8E93)
                                     Icon(
-                                        imageVector = if (isSelected) Icons.Filled.Lock else Icons.Outlined.Lock,
+                                        imageVector = if (isSelected) ShieldFilledIcon else ShieldIcon,
                                         contentDescription = "Blocked",
                                         tint = iconColor
                                     )
@@ -298,7 +306,7 @@ class MainActivity : ComponentActivity() {
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .layerBackdrop(dialogBackdrop)
-                                    .background(Color.Transparent)
+                                    .background(Color.Black.copy(alpha = if (isLightTheme) 0.08f else 0.3f))
                                     .clickable(
                                         interactionSource = null,
                                         indication = null,
@@ -337,3 +345,46 @@ fun rememberLazyListScrollOffset(state: LazyListState): Float {
         }
     }.value
 }
+
+val ShieldIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "Shield",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.White),
+        strokeLineWidth = 2f,
+        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+    ) {
+        moveTo(12f, 2f)
+        lineTo(4f, 5f)
+        verticalLineTo(11f)
+        curveTo(4f, 16.52f, 7.41f, 20.24f, 12f, 22f)
+        curveTo(16.59f, 20.24f, 20f, 16.52f, 20f, 11f)
+        verticalLineTo(5f)
+        lineTo(12f, 2f)
+        close()
+    }.build()
+
+val ShieldFilledIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "ShieldFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        fill = androidx.compose.ui.graphics.SolidColor(Color.White)
+    ) {
+        moveTo(12f, 2f)
+        lineTo(4f, 5f)
+        verticalLineTo(11f)
+        curveTo(4f, 16.52f, 7.41f, 20.24f, 12f, 22f)
+        curveTo(16.59f, 20.24f, 20f, 16.52f, 20f, 11f)
+        verticalLineTo(5f)
+        lineTo(12f, 2f)
+        close()
+    }.build()

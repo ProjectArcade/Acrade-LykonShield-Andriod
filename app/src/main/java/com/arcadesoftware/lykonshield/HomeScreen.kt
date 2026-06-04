@@ -177,7 +177,15 @@ fun HomeScreen(
         contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding + 16.dp, start = 16.dp, end = 16.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-        // No header text block ("Shield" text has been removed as requested)
+        item {
+            Text(
+                text = "Home",
+                fontSize = 34.sp,
+                fontWeight = FontWeight.Bold,
+                color = contentColor,
+                modifier = Modifier.padding(vertical = 12.dp)
+            )
+        }
 
         item {
             ShieldStatusCard(enabled = isProtectionEnabled, backdrop = backdrop)
@@ -197,7 +205,7 @@ fun HomeScreen(
                 ) {
                     Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                         Text(
-                            text = "Shield Protection",
+                            text = "Lykon Shield Protection",
                             fontWeight = FontWeight.Bold,
                             fontSize = 18.sp,
                             color = contentColor

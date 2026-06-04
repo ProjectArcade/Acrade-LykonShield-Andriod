@@ -62,6 +62,16 @@ fun SettingsScreen(
             ),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
+            item {
+                Text(
+                    text = "Settings",
+                    fontSize = 34.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = contentColor,
+                    modifier = Modifier.padding(vertical = 12.dp)
+                )
+            }
+
             item { ProfileCard() }
 
             item {
@@ -193,17 +203,10 @@ fun IosThemeDialog(
     val isLightTheme = LocalIsLightTheme.current
     val textColor = if (isLightTheme) Color.Black else Color.White
 
-    LiquidButton(
-        onClick = {},
+    GlassCard(
         backdrop = backdrop,
         modifier = Modifier.width(270.dp),
-        isInteractive = true,
-        surfaceColor = if (isLightTheme) Color.White.copy(alpha = 0.25f) else Color.Transparent,
-        blurRadius = 24.dp,
-        lensRadius = 24.dp,
-        lensOffset = 36.dp,
-        chromaticAberration = true,
-        shape = { RoundedCornerShape(14.dp) }
+        shape = RoundedCornerShape(14.dp)
     ) {
         Column(
             modifier = Modifier.fillMaxWidth()
