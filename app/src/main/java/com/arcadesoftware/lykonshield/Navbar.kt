@@ -42,6 +42,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.LayoutDirection
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.draw.drawBehind
@@ -423,11 +424,13 @@ fun LiquidBottomTabs(
     backdrop: Backdrop,
     tabsCount: Int,
     modifier: Modifier = Modifier,
+    accentColor: Color = Color.Unspecified,
+    height: Dp = 56.dp,
     content: @Composable RowScope.() -> Unit
 ) {
     val isLightTheme = LocalIsLightTheme.current
     val isLiquidGlass = LocalIsLiquidGlassEnabled.current
-    val accentColor = if (isLightTheme) Color(0xFF0088FF) else Color(0xFF0091FF)
+    val finalAccentColor = if (accentColor != Color.Unspecified) accentColor else (if (isLightTheme) Color(0xFF0088FF) else Color(0xFF0091FF))
     val containerColor = if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f) else Color(0xFF121212).copy(0.4f)
     val tabsBackdrop = rememberLayerBackdrop()
 
@@ -540,7 +543,7 @@ fun LiquidBottomTabs(
                     onDrawSurface = { drawRect(containerColor) }
                 )
                 .then(interactiveHighlight.modifier)
-                .height(64.dp)
+                .height(height + 8.dp)
                 .fillMaxWidth()
                 .padding(4.dp),
             verticalAlignment = Alignment.CenterVertically,
@@ -585,10 +588,10 @@ fun LiquidBottomTabs(
                         onDrawSurface = { drawRect(containerColor) }
                     )
                     .then(interactiveHighlight.modifier)
-                    .height(56.dp)
+                    .height(height)
                     .fillMaxWidth()
                     .padding(horizontal = 4.dp)
-                    .graphicsLayer(colorFilter = ColorFilter.tint(accentColor)),
+                    .graphicsLayer(colorFilter = ColorFilter.tint(finalAccentColor)),
                 verticalAlignment = Alignment.CenterVertically,
                 content = content
             )
@@ -660,7 +663,7 @@ fun LiquidBottomTabs(
                         drawRect(Color.Black.copy(alpha = 0.03f * progress))
                     }
                 )
-                .height(56.dp)
+                .height(height)
                 .fillMaxWidth(1f / tabsCount)
         )
     }

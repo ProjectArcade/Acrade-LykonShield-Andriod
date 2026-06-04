@@ -227,26 +227,6 @@ object ShieldStatsManager {
                     }
                 }
 
-                // Pre-populate if empty for baseline visual presentation (Parental Control aesthetics)
-                if (dailyBlockHistory.isEmpty()) {
-                    val sdf = java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.US)
-                    val cal = java.util.Calendar.getInstance()
-                    val values = listOf(28, 42, 18, 56, 31, 74, 49)
-                    for (i in 0 until 7) {
-                        cal.time = java.util.Date()
-                        cal.add(java.util.Calendar.DAY_OF_YEAR, -i)
-                        val key = sdf.format(cal.time)
-                        dailyBlockHistory[key] = values[i % values.size]
-                    }
-                }
-
-                if (categoryBlockCounts.isEmpty()) {
-                    categoryBlockCounts[BlockCategory.AD.name] = 145
-                    categoryBlockCounts[BlockCategory.TRACKER.name] = 92
-                    categoryBlockCounts[BlockCategory.ANALYTICS.name] = 68
-                    categoryBlockCounts[BlockCategory.MALWARE.name] = 12
-                    categoryBlockCounts[BlockCategory.OTHER.name] = 34
-                }
             }
         }
     }

@@ -37,6 +37,9 @@ import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.vector.path
+
 
 @Composable
 fun BlockedScreen(
@@ -52,6 +55,7 @@ fun BlockedScreen(
     val pm = context.packageManager
 
     var selectedTab by remember { mutableStateOf(0) } // 0 = Apps, 1 = Network
+    var selectedGraphTab by remember { mutableStateOf(0) } // 0 = Real-time, 1 = Daily, 2 = Categories
 
     // Load active apps with JNI details
     var blockedAppList by remember { mutableStateOf<List<Triple<String, Drawable?, Int>>>(emptyList()) }
@@ -148,11 +152,11 @@ fun BlockedScreen(
                 }
             }
         } else {
-            // Liquid Glass Graph Card
+            // Glass Dashboard Graphs Card with Tab View
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = "BLOCK HISTORY OVER TIME",
+                        text = "PROTECTION STATISTICS",
                         color = Color.Gray,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
@@ -164,134 +168,141 @@ fun BlockedScreen(
                     ) {
                         Column(
                             modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                            verticalArrangement = Arrangement.spacedBy(16.dp)
                         ) {
-                            Text(
-                                text = "Real-time Interception Rate",
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = contentColor
-                            )
-                            
-                            val historyPoints = ShieldStatsManager.hourlyBlockHistory.toList()
-                            if (historyPoints.isNotEmpty()) {
-                                LiquidGlassGraph(
-                                    history = historyPoints,
-                                    modifier = Modifier.fillMaxWidth().height(120.dp),
-                                    lineColor = Color(0xFFFF3B30),
-                                    fillColor = Color(0xFFFF3B30).copy(alpha = 0.15f)
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier.fillMaxWidth().height(120.dp),
-                                    contentAlignment = Alignment.Center
-                               ) {
-                                   Text("Waiting for network activity...", color = Color.Gray, fontSize = 13.sp)
-                               }
-                            }
-                        }
-                    }
-                }
-            }
-
-            // Daily Bar Chart Card
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "DAILY ACTIVITY (LAST 7 DAYS)",
-                        color = Color.Gray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                    GlassCard(
-                        backdrop = backdrop,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            DailyBarChart(
-                                dailyHistory = ShieldStatsManager.dailyBlockHistory,
-                                isLightTheme = isLightTheme
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Category breakdown Pie/Donut Chart Card
-            item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "THREAT CATEGORY BREAKDOWN",
-                        color = Color.Gray,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                    GlassCard(
-                        backdrop = backdrop,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier.padding(16.dp),
-                            verticalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            CategoryPieChart(
-                                categoryCounts = ShieldStatsManager.categoryBlockCounts,
-                                isLightTheme = isLightTheme
-                            )
-                        }
-                    }
-                }
-            }
-
-            // Glass Compact Segmented Tab Controls
-            // Glass Compact Segmented Tab Controls
-            item {
-                GlassCard(
-                    backdrop = backdrop,
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(24.dp)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
-                    ) {
-                        listOf("Applications", "Network Hosts", "Traffic Stream").forEachIndexed { index, label ->
-                            val isSelected = selectedTab == index
-                            Box(
-                                modifier = Modifier
-                                    .weight(1f)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .background(
-                                        if (isSelected) {
-                                            Brush.verticalGradient(
-                                                colors = if (isLightTheme) {
-                                                    listOf(Color(0xCC007AFF), Color(0x990055BB))
-                                                } else {
-                                                    listOf(Color(0xCC0A84FF), Color(0x990066DD))
-                                                }
-                                            )
-                                        } else {
-                                            Brush.verticalGradient(colors = listOf(Color.Transparent, Color.Transparent))
-                                        }
-                                    )
-                                    .clickable { selectedTab = index }
-                                    .padding(vertical = 8.dp),
-                                contentAlignment = Alignment.Center
+                            // Graph Switcher Tabs (Draggable Liquid Glass Tab View)
+                            LiquidBottomTabs(
+                                selectedTabIndex = { selectedGraphTab },
+                                onTabSelected = { selectedGraphTab = it },
+                                backdrop = backdrop,
+                                tabsCount = 3,
+                                accentColor = if (isLightTheme) Color(0xFF007AFF).copy(alpha = 0.8f) else Color(0xFF64D2FF),
+                                height = 44.dp,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Text(
-                                    text = label,
-                                    color = if (isSelected) Color.White else (if (isLightTheme) Color.DarkGray.copy(alpha = 0.8f) else Color.LightGray.copy(alpha = 0.8f)),
-                                    fontSize = 11.sp,
-                                    fontWeight = FontWeight.Bold
-                                )
+                                listOf("Real-time", "Daily", "Categories").forEachIndexed { index, label ->
+                                    LiquidBottomTab(onClick = { selectedGraphTab = index }) {
+                                        val isSelected = selectedGraphTab == index
+                                        val iconColor = if (isSelected) {
+                                            if (isLightTheme) Color(0xFF0055AA) else Color(0xFFE5F6FF)
+                                        } else {
+                                            if (isLightTheme) Color.DarkGray.copy(alpha = 0.6f) else Color.LightGray.copy(alpha = 0.6f)
+                                        }
+                                        val icon = when (index) {
+                                            0 -> if (isSelected) RealTimeFilledIcon else RealTimeIcon
+                                            1 -> if (isSelected) DailyFilledIcon else DailyIcon
+                                            else -> if (isSelected) CategoriesFilledIcon else CategoriesIcon
+                                        }
+                                        Icon(
+                                            imageVector = icon,
+                                            contentDescription = label,
+                                            tint = iconColor,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                        Text(
+                                            text = label,
+                                            color = iconColor,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 10.sp
+                                        )
+                                    }
+                                }
                             }
+
+                            // Active graph content showing only real data
+                            when (selectedGraphTab) {
+                                0 -> {
+                                    val historyPoints = ShieldStatsManager.hourlyBlockHistory.toList()
+                                    if (historyPoints.isNotEmpty()) {
+                                        LiquidGlassGraph(
+                                            history = historyPoints,
+                                            modifier = Modifier.fillMaxWidth().height(120.dp),
+                                            lineColor = Color(0xFFFF3B30),
+                                            fillColor = Color(0xFFFF3B30).copy(alpha = 0.15f)
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().height(120.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("Waiting for network activity...", color = Color.Gray, fontSize = 13.sp)
+                                        }
+                                    }
+                                }
+                                1 -> {
+                                    val dailyHistory = ShieldStatsManager.dailyBlockHistory.toMap()
+                                    if (dailyHistory.isNotEmpty()) {
+                                        DailyBarChart(
+                                            dailyHistory = dailyHistory,
+                                            isLightTheme = isLightTheme
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().height(120.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("No daily block activity recorded yet.", color = Color.Gray, fontSize = 13.sp)
+                                        }
+                                    }
+                                }
+                                2 -> {
+                                    val categoryCounts = ShieldStatsManager.categoryBlockCounts.toMap()
+                                    if (categoryCounts.values.any { it > 0 }) {
+                                        CategoryPieChart(
+                                            categoryCounts = categoryCounts,
+                                            isLightTheme = isLightTheme
+                                        )
+                                    } else {
+                                        Box(
+                                            modifier = Modifier.fillMaxWidth().height(120.dp),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text("No category classification logs yet.", color = Color.Gray, fontSize = 13.sp)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Glass Compact Segmented Tab Controls
+            item {
+                LiquidBottomTabs(
+                    selectedTabIndex = { selectedTab },
+                    onTabSelected = { selectedTab = it },
+                    backdrop = backdrop,
+                    tabsCount = 3,
+                    accentColor = if (isLightTheme) Color(0xFF007AFF).copy(alpha = 0.8f) else Color(0xFF64D2FF),
+                    height = 44.dp,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    listOf("Applications", "Network Hosts", "Traffic Stream").forEachIndexed { index, label ->
+                        LiquidBottomTab(onClick = { selectedTab = index }) {
+                            val isSelected = selectedTab == index
+                            val iconColor = if (isSelected) {
+                                if (isLightTheme) Color(0xFF0055AA) else Color(0xFFE5F6FF)
+                            } else {
+                                if (isLightTheme) Color.DarkGray.copy(alpha = 0.6f) else Color.LightGray.copy(alpha = 0.6f)
+                            }
+                            val icon = when (index) {
+                                0 -> if (isSelected) AppsFilledIcon else AppsIcon
+                                1 -> if (isSelected) NetworkFilledIcon else NetworkIcon
+                                else -> if (isSelected) TrafficFilledIcon else TrafficIcon
+                            }
+                            Icon(
+                                imageVector = icon,
+                                contentDescription = label,
+                                tint = iconColor,
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Text(
+                                text = label,
+                                color = iconColor,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 10.sp
+                            )
                         }
                     }
                 }
@@ -815,3 +826,384 @@ fun CategoryPieChart(
         }
     }
 }
+
+// Custom Icons for Statistics & Tabs
+val RealTimeIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "RealTime",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 2f,
+        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+    ) {
+        moveTo(3f, 16f)
+        lineTo(9f, 10f)
+        lineTo(14f, 14f)
+        lineTo(21f, 6f)
+    }.build()
+
+val RealTimeFilledIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "RealTimeFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(
+            stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+            strokeLineWidth = 2.5f,
+            strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+            strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+        ) {
+            moveTo(3f, 16f)
+            lineTo(9f, 10f)
+            lineTo(14f, 14f)
+            lineTo(21f, 6f)
+        }
+        path(
+            fill = androidx.compose.ui.graphics.SolidColor(Color.Black),
+            fillAlpha = 0.25f
+        ) {
+            moveTo(3f, 16f)
+            lineTo(9f, 10f)
+            lineTo(14f, 14f)
+            lineTo(21f, 6f)
+            lineTo(21f, 20f)
+            lineTo(3f, 20f)
+            close()
+        }
+    }.build()
+
+val DailyIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "Daily",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 2f,
+        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+    ) {
+        // Bar 1
+        moveTo(4f, 20f)
+        lineTo(4f, 12f)
+        lineTo(8f, 12f)
+        lineTo(8f, 20f)
+        
+        // Bar 2
+        moveTo(10f, 20f)
+        lineTo(10f, 6f)
+        lineTo(14f, 6f)
+        lineTo(14f, 20f)
+        
+        // Bar 3
+        moveTo(16f, 20f)
+        lineTo(16f, 10f)
+        lineTo(20f, 10f)
+        lineTo(20f, 20f)
+    }.build()
+
+val DailyFilledIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "DailyFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        fill = androidx.compose.ui.graphics.SolidColor(Color.Black)
+    ) {
+        // Bar 1
+        moveTo(4f, 11f)
+        curveTo(4f, 10.5f, 4.5f, 10f, 5f, 10f)
+        horizontalLineTo(7f)
+        curveTo(7.5f, 10f, 8f, 10.5f, 8f, 11f)
+        verticalLineTo(20f)
+        horizontalLineTo(4f)
+        close()
+        
+        // Bar 2
+        moveTo(10f, 5f)
+        curveTo(10f, 4.5f, 10.5f, 4f, 11f, 4f)
+        horizontalLineTo(13f)
+        curveTo(13.5f, 4f, 14f, 4.5f, 14f, 5f)
+        verticalLineTo(20f)
+        horizontalLineTo(10f)
+        close()
+        
+        // Bar 3
+        moveTo(16f, 9f)
+        curveTo(16f, 8.5f, 16.5f, 8f, 17f, 8f)
+        horizontalLineTo(19f)
+        curveTo(19.5f, 8f, 20f, 8.5f, 20f, 9f)
+        verticalLineTo(20f)
+        horizontalLineTo(16f)
+        close()
+    }.build()
+
+val CategoriesIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "Categories",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 2f
+    ) {
+        moveTo(12f, 4f)
+        curveTo(16.4f, 4f, 20f, 7.6f, 20f, 12f)
+        curveTo(20f, 16.4f, 16.4f, 20f, 12f, 20f)
+        curveTo(7.6f, 20f, 4f, 16.4f, 4f, 12f)
+        curveTo(4f, 7.6f, 7.6f, 4f, 12f, 4f)
+        close()
+        moveTo(12f, 12f)
+        lineTo(12f, 4f)
+        moveTo(12f, 12f)
+        lineTo(18f, 16f)
+    }.build()
+
+val CategoriesFilledIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "CategoriesFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(fill = androidx.compose.ui.graphics.SolidColor(Color.Black)) {
+            moveTo(12f, 12f)
+            lineTo(12f, 2f)
+            curveTo(6.48f, 2f, 2f, 6.48f, 2f, 12f)
+            curveTo(2f, 17.52f, 6.48f, 22f, 12f, 22f)
+            curveTo(17.52f, 22f, 22f, 17.52f, 22f, 12f)
+            curveTo(22f, 11f, 21.8f, 10f, 21.5f, 9f)
+            lineTo(12f, 12f)
+            close()
+        }
+        path(fill = androidx.compose.ui.graphics.SolidColor(Color.Black)) {
+            moveTo(13.5f, 10.5f)
+            lineTo(22f, 7.5f)
+            curveTo(21f, 5f, 19f, 3f, 16.5f, 2f)
+            close()
+        }
+    }.build()
+
+val AppsIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "Apps",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 2f,
+        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+    ) {
+        moveTo(4f, 4f)
+        horizontalLineTo(9f)
+        verticalLineTo(9f)
+        horizontalLineTo(4f)
+        close()
+        
+        moveTo(15f, 4f)
+        horizontalLineTo(20f)
+        verticalLineTo(9f)
+        horizontalLineTo(15f)
+        close()
+        
+        moveTo(4f, 15f)
+        horizontalLineTo(9f)
+        verticalLineTo(20f)
+        horizontalLineTo(4f)
+        close()
+        
+        moveTo(15f, 15f)
+        horizontalLineTo(20f)
+        verticalLineTo(20f)
+        horizontalLineTo(15f)
+        close()
+    }.build()
+
+val AppsFilledIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "AppsFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        fill = androidx.compose.ui.graphics.SolidColor(Color.Black)
+    ) {
+        moveTo(4f, 4f)
+        curveTo(4f, 3.5f, 4.5f, 3f, 5f, 3f)
+        horizontalLineTo(9f)
+        curveTo(9.5f, 3f, 10f, 3.5f, 10f, 4f)
+        verticalLineTo(8f)
+        curveTo(10f, 8.5f, 9.5f, 9f, 9f, 9f)
+        horizontalLineTo(5f)
+        curveTo(4.5f, 9f, 4f, 8.5f, 4f, 8f)
+        close()
+        
+        moveTo(14f, 4f)
+        curveTo(14f, 3.5f, 14.5f, 3f, 15f, 3f)
+        horizontalLineTo(19f)
+        curveTo(19.5f, 3f, 20f, 3.5f, 20f, 4f)
+        verticalLineTo(8f)
+        curveTo(20f, 8.5f, 19.5f, 9f, 19f, 9f)
+        horizontalLineTo(15f)
+        curveTo(14.5f, 9f, 14f, 8.5f, 14f, 8f)
+        close()
+        
+        moveTo(4f, 14f)
+        curveTo(4f, 13.5f, 4.5f, 13f, 5f, 13f)
+        horizontalLineTo(9f)
+        curveTo(9.5f, 13f, 10f, 13.5f, 10f, 14f)
+        verticalLineTo(18f)
+        curveTo(10f, 18.5f, 9.5f, 19f, 9f, 19f)
+        horizontalLineTo(5f)
+        curveTo(4.5f, 19f, 4f, 18.5f, 4f, 18f)
+        close()
+        
+        moveTo(14f, 14f)
+        curveTo(14f, 13.5f, 14.5f, 13f, 15f, 13f)
+        horizontalLineTo(19f)
+        curveTo(19.5f, 13f, 20f, 13.5f, 20f, 14f)
+        verticalLineTo(18f)
+        curveTo(20f, 18.5f, 19.5f, 19f, 19f, 19f)
+        horizontalLineTo(15f)
+        curveTo(14.5f, 19f, 14f, 18.5f, 14f, 18f)
+        close()
+    }.build()
+
+val NetworkIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "Network",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 2f,
+        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+    ) {
+        moveTo(12f, 3f)
+        curveTo(17f, 3f, 21f, 7f, 21f, 12f)
+        curveTo(21f, 17f, 17f, 21f, 12f, 21f)
+        curveTo(7f, 21f, 3f, 17f, 3f, 12f)
+        curveTo(3f, 7f, 7f, 3f, 12f, 3f)
+        close()
+        moveTo(3f, 12f)
+        lineTo(21f, 12f)
+        moveTo(12f, 3f)
+        curveTo(10f, 6f, 10f, 18f, 12f, 21f)
+        curveTo(14f, 18f, 14f, 6f, 12f, 3f)
+    }.build()
+
+val NetworkFilledIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "NetworkFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(fill = androidx.compose.ui.graphics.SolidColor(Color.Black)) {
+            moveTo(12f, 2f)
+            curveTo(17.52f, 2f, 22f, 6.48f, 22f, 12f)
+            curveTo(22f, 17.52f, 17.52f, 22f, 12f, 22f)
+            curveTo(6.48f, 22f, 2f, 17.52f, 2f, 12f)
+            curveTo(2f, 6.48f, 6.48f, 2f, 12f, 2f)
+            close()
+        }
+        path(
+            stroke = androidx.compose.ui.graphics.SolidColor(Color.White),
+            strokeLineWidth = 1.5f,
+            strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+            strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+        ) {
+            moveTo(3f, 12f)
+            lineTo(21f, 12f)
+            moveTo(5f, 8f)
+            lineTo(19f, 8f)
+            moveTo(5f, 16f)
+            lineTo(19f, 16f)
+            moveTo(12f, 2f)
+            lineTo(12f, 22f)
+        }
+    }.build()
+
+val TrafficIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "Traffic",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 2f,
+        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+    ) {
+        moveTo(7f, 4f)
+        lineTo(7f, 20f)
+        moveTo(7f, 4f)
+        lineTo(3f, 8f)
+        moveTo(7f, 4f)
+        lineTo(11f, 8f)
+        
+        moveTo(17f, 20f)
+        lineTo(17f, 4f)
+        moveTo(17f, 20f)
+        lineTo(13f, 16f)
+        moveTo(17f, 20f)
+        lineTo(21f, 16f)
+    }.build()
+
+val TrafficFilledIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "TrafficFilled",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).apply {
+        path(fill = androidx.compose.ui.graphics.SolidColor(Color.Black)) {
+            moveTo(6f, 4f)
+            horizontalLineTo(8f)
+            verticalLineTo(15f)
+            horizontalLineTo(6f)
+            close()
+            moveTo(4f, 14f)
+            lineTo(7f, 20f)
+            lineTo(10f, 14f)
+            close()
+        }
+        path(fill = androidx.compose.ui.graphics.SolidColor(Color.Black)) {
+            moveTo(16f, 9f)
+            horizontalLineTo(18f)
+            verticalLineTo(20f)
+            horizontalLineTo(16f)
+            close()
+            moveTo(14f, 10f)
+            lineTo(17f, 4f)
+            lineTo(20f, 10f)
+            close()
+        }
+    }.build()
+
