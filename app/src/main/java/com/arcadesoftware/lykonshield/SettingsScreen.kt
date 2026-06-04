@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
@@ -40,8 +41,10 @@ fun SettingsScreen(
     themeMode: Int,
     onThemeClick: () -> Unit,
     onExcludeAppsClick: () -> Unit,
-    topPadding: Dp,
-    bottomPadding: Dp,
+    isLiquidGlassEnabled: Boolean,
+    onLiquidGlassToggle: (Boolean) -> Unit,
+    topPadding: androidx.compose.ui.unit.Dp,
+    bottomPadding: androidx.compose.ui.unit.Dp,
     backdrop: Backdrop
 ) {
     val isLightTheme = LocalIsLightTheme.current
@@ -131,7 +134,14 @@ fun SettingsScreen(
                             .background(cardBg)
                     ) {
                         SettingsRow(title = "Custom Shaders", value = "AGSL Active", showDivider = true)
-                        SettingsRow(title = "Backdrop Blur Radius", value = "24dp", showDivider = false)
+                        SettingsRow(title = "Backdrop Blur Radius", value = "24dp", showDivider = true)
+                        SettingsSwitchRow(
+                            title = "Liquid Glass",
+                            checked = isLiquidGlassEnabled,
+                            onCheckedChange = onLiquidGlassToggle,
+                            backdrop = backdrop,
+                            showDivider = false
+                        )
                     }
                 }
             }
@@ -298,25 +308,7 @@ fun ProfileCard() {
     val textColor = if (isLightTheme) Color.Black else Color.White
     val cardBg = if (isLightTheme) Color.White else Color(0xFF1C1C1E)
 
-    val context = LocalContext.current
-    val appIconDrawable = remember(context) {
-        try { context.packageManager.getApplicationIcon(context.packageName) }
-        catch (_: Exception) { null }
-    }
-    val appIconBitmap = remember(appIconDrawable) {
-        appIconDrawable?.let { drawable ->
-            try {
-                val bmp = createBitmap(
-                    drawable.intrinsicWidth.coerceAtLeast(1),
-                    drawable.intrinsicHeight.coerceAtLeast(1)
-                )
-                val canvas = android.graphics.Canvas(bmp)
-                drawable.setBounds(0, 0, canvas.width, canvas.height)
-                drawable.draw(canvas)
-                bmp.asImageBitmap()
-            } catch (_: Exception) { null }
-        }
-    }
+    val iconResId = if (isLightTheme) R.drawable.ligh_icon else R.drawable.dark_icon
 
     Box(
         modifier = Modifier
@@ -329,31 +321,14 @@ fun ProfileCard() {
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            if (appIconBitmap != null) {
-                Image(
-                    bitmap = appIconBitmap,
-                    contentDescription = "App Icon",
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(14.dp)),
-                    contentScale = ContentScale.Crop
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .size(60.dp)
-                        .clip(RoundedCornerShape(14.dp))
-                        .background(Color(0xFF007AFF)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(
-                        text = "L",
-                        color = Color.White,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 28.sp
-                    )
-                }
-            }
+            Image(
+                painter = painterResource(id = iconResId),
+                contentDescription = "App Icon",
+                modifier = Modifier
+                    .size(60.dp)
+                    .clip(RoundedCornerShape(14.dp)),
+                contentScale = ContentScale.Crop
+            )
             Column {
                 Text(
                     text = "LykonShield",
@@ -391,6 +366,44 @@ fun SettingsRow(
         ) {
             Text(text = title, color = textColor, fontSize = 16.sp)
             Text(text = value, color = valueColor, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+        }
+        if (showDivider) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .padding(start = 16.dp)
+                    .background(if (isLightTheme) Color(0xFFC7C7CC) else Color(0xFF38383A))
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsSwitchRow(
+    title: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    backdrop: Backdrop,
+    showDivider: Boolean
+) {
+    val isLightTheme = LocalIsLightTheme.current
+    val textColor = if (isLightTheme) Color.Black else Color.White
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = title, color = textColor, fontSize = 16.sp)
+            LiquidToggle(
+                selected = { checked },
+                onSelect = onCheckedChange,
+                backdrop = backdrop
+            )
         }
         if (showDivider) {
             Box(

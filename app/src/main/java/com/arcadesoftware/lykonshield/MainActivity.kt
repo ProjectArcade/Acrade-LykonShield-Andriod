@@ -49,14 +49,40 @@ import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.arcadesoftware.lykon.AdblockEngine
+import android.net.VpnService
+import android.content.Intent
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        setTheme(R.style.Theme_LykonShield)
         super.onCreate(savedInstanceState)
+        
+        // Initialize adblocker engine and stats manager
+        AdblockEngine.init(applicationContext)
+        ShieldStatsManager.init(applicationContext)
+        
+        val prefs = getSharedPreferences("lykon_shield_prefs", MODE_PRIVATE)
         enableEdgeToEdge()
         setContent {
-            var themeMode by rememberSaveable { mutableIntStateOf(0) }
+            val initialThemeMode = remember { prefs.getInt("theme_mode", 0) }
+            val initialLiquidGlass = remember { prefs.getBoolean("liquid_glass_enabled", true) }
+            val initialProtection = remember { prefs.getBoolean("protection_enabled", false) }
+            val initialExcludedApps = remember { prefs.getStringSet("excluded_apps", emptySet()) ?: emptySet() }
+
+            var themeMode by remember { mutableIntStateOf(initialThemeMode) }
             var showThemeDialog by rememberSaveable { mutableStateOf(false) }
+            var isLiquidGlassEnabled by remember { mutableStateOf(initialLiquidGlass) }
+
+            LaunchedEffect(themeMode) {
+                prefs.edit().putInt("theme_mode", themeMode).apply()
+            }
+            LaunchedEffect(isLiquidGlassEnabled) {
+                prefs.edit().putBoolean("liquid_glass_enabled", isLiquidGlassEnabled).apply()
+            }
+
             val isDark = when (themeMode) {
                 1 -> false
                 2 -> true
@@ -72,7 +98,10 @@ class MainActivity : ComponentActivity() {
             }
             LykonShieldTheme(darkTheme = isDark, dynamicColor = false) {
                 val isLightTheme = !isDark
-                CompositionLocalProvider(LocalIsLightTheme provides isLightTheme) {
+                CompositionLocalProvider(
+                    LocalIsLightTheme provides isLightTheme,
+                    LocalIsLiquidGlassEnabled provides isLiquidGlassEnabled
+                ) {
                     val backdrop = rememberLayerBackdrop {
                         drawRect(if (isLightTheme) Color(0xFFF2F2F7) else Color.Black)
                         drawContent()
@@ -110,8 +139,65 @@ class MainActivity : ComponentActivity() {
 
                 val contentColor = if (isLightTheme) Color.Black else Color.White
 
-                var isProtectionEnabled by rememberSaveable { mutableStateOf(false) }
-                var excludedApps by rememberSaveable { mutableStateOf(setOf<String>()) }
+                var isProtectionEnabled by remember { mutableStateOf(initialProtection) }
+                var excludedApps by remember { mutableStateOf(initialExcludedApps) }
+
+                val context = androidx.compose.ui.platform.LocalContext.current
+                val vpnLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.StartActivityForResult()
+                ) { result ->
+                    if (result.resultCode == android.app.Activity.RESULT_OK) {
+                        val startIntent = Intent(context, LykonVpnService::class.java).apply {
+                            action = LykonVpnService.ACTION_START
+                        }
+                        context.startService(startIntent)
+                        isProtectionEnabled = true
+                    } else {
+                        isProtectionEnabled = false
+                    }
+                }
+
+                val toggleProtection = {
+                    if (isProtectionEnabled) {
+                        val stopIntent = Intent(context, LykonVpnService::class.java).apply {
+                            action = LykonVpnService.ACTION_STOP
+                        }
+                        context.startService(stopIntent)
+                        isProtectionEnabled = false
+                    } else {
+                        val prepareIntent = VpnService.prepare(context)
+                        if (prepareIntent != null) {
+                            vpnLauncher.launch(prepareIntent)
+                        } else {
+                            val startIntent = Intent(context, LykonVpnService::class.java).apply {
+                                action = LykonVpnService.ACTION_START
+                            }
+                            context.startService(startIntent)
+                            isProtectionEnabled = true
+                        }
+                    }
+                }
+
+                LaunchedEffect(Unit) {
+                    if (initialProtection) {
+                        val prepareIntent = VpnService.prepare(context)
+                        if (prepareIntent == null) {
+                            val startIntent = Intent(context, LykonVpnService::class.java).apply {
+                                action = LykonVpnService.ACTION_START
+                            }
+                            context.startService(startIntent)
+                        } else {
+                            isProtectionEnabled = false
+                        }
+                    }
+                }
+
+                LaunchedEffect(isProtectionEnabled) {
+                    prefs.edit().putBoolean("protection_enabled", isProtectionEnabled).apply()
+                }
+                LaunchedEffect(excludedApps) {
+                    prefs.edit().putStringSet("excluded_apps", excludedApps).apply()
+                }
 
                 val homeState = rememberLazyListState()
                 val blockedState = rememberLazyListState()
@@ -161,7 +247,7 @@ class MainActivity : ComponentActivity() {
                                 HomeScreen(
                                     state = homeState,
                                     isProtectionEnabled = isProtectionEnabled,
-                                    onProtectionToggle = { isProtectionEnabled = !isProtectionEnabled },
+                                    onProtectionToggle = toggleProtection,
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
                                     topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
@@ -173,7 +259,8 @@ class MainActivity : ComponentActivity() {
                                     state = blockedState,
                                     isProtectionEnabled = isProtectionEnabled,
                                     topPadding = 12.dp + statusBarPadding,
-                                    bottomPadding = 88.dp + navBarPadding
+                                    bottomPadding = 88.dp + navBarPadding,
+                                    backdrop = backgroundBackdrop
                                 )
                             }
                             composable("settings") {
@@ -181,8 +268,9 @@ class MainActivity : ComponentActivity() {
                                     state = settingsState,
                                     themeMode = themeMode,
                                     onThemeClick = { showThemeDialog = true },
-//                                    onDeveloperClick = { navController.navigate("developer") },
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
+                                    isLiquidGlassEnabled = isLiquidGlassEnabled,
+                                    onLiquidGlassToggle = { isLiquidGlassEnabled = it },
                                     topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
                                     backdrop = backgroundBackdrop

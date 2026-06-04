@@ -363,6 +363,7 @@ half4 main(float2 coord) {
 }
 
 val LocalIsLightTheme = staticCompositionLocalOf { true }
+val LocalIsLiquidGlassEnabled = staticCompositionLocalOf { true }
 
 val ChevronLeftIcon: ImageVector
     get() = ImageVector.Builder(
@@ -425,6 +426,7 @@ fun LiquidBottomTabs(
     content: @Composable RowScope.() -> Unit
 ) {
     val isLightTheme = LocalIsLightTheme.current
+    val isLiquidGlass = LocalIsLiquidGlassEnabled.current
     val accentColor = if (isLightTheme) Color(0xFF0088FF) else Color(0xFF0091FF)
     val containerColor = if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f) else Color(0xFF121212).copy(0.4f)
     val tabsBackdrop = rememberLayerBackdrop()
@@ -518,13 +520,22 @@ fun LiquidBottomTabs(
                     effects = {
                         vibrancy()
                         blur(8f.dp.toPx())
-                        lens(24f.dp.toPx(), 24f.dp.toPx())
+                        if (isLiquidGlass) {
+                            lens(24f.dp.toPx(), 24f.dp.toPx())
+                        } else {
+                            lens(12f.dp.toPx(), 12f.dp.toPx())
+                        }
                     },
                     layerBlock = {
-                        val progress = dampedDragAnimation.pressProgress
-                        val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
-                        scaleX = scale
-                        scaleY = scale
+                        if (isLiquidGlass) {
+                            val progress = dampedDragAnimation.pressProgress
+                            val scale = lerp(1f, 1f + 16f.dp.toPx() / size.width, progress)
+                            scaleX = scale
+                            scaleY = scale
+                        } else {
+                            scaleX = 1f
+                            scaleY = 1f
+                        }
                     },
                     onDrawSurface = { drawRect(containerColor) }
                 )
@@ -538,7 +549,11 @@ fun LiquidBottomTabs(
 
         CompositionLocalProvider(
             LocalLiquidBottomTabScale provides {
-                lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
+                if (isLiquidGlass) {
+                    lerp(1f, 1.2f, dampedDragAnimation.pressProgress)
+                } else {
+                    1f
+                }
             }
         ) {
             Row(
@@ -554,10 +569,14 @@ fun LiquidBottomTabs(
                             val progress = dampedDragAnimation.pressProgress
                             vibrancy()
                             blur(8f.dp.toPx())
-                            lens(
-                                24f.dp.toPx() * progress,
-                                24f.dp.toPx() * progress
-                            )
+                            if (isLiquidGlass) {
+                                lens(
+                                    24f.dp.toPx() * progress,
+                                    24f.dp.toPx() * progress
+                                )
+                            } else {
+                                lens(0f, 0f)
+                            }
                         },
                         highlight = {
                             val progress = dampedDragAnimation.pressProgress
@@ -590,11 +609,19 @@ fun LiquidBottomTabs(
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
-                        lens(
-                            10f.dp.toPx() * progress,
-                            14f.dp.toPx() * progress,
-                            chromaticAberration = true
-                        )
+                        if (isLiquidGlass) {
+                            lens(
+                                10f.dp.toPx() * progress,
+                                14f.dp.toPx() * progress,
+                                chromaticAberration = true
+                            )
+                        } else {
+                            lens(
+                                5f.dp.toPx(),
+                                7f.dp.toPx(),
+                                chromaticAberration = true
+                            )
+                        }
                     },
                     highlight = {
                         val progress = dampedDragAnimation.pressProgress
@@ -612,11 +639,16 @@ fun LiquidBottomTabs(
                         )
                     },
                     layerBlock = {
-                        scaleX = dampedDragAnimation.scaleX
-                        scaleY = dampedDragAnimation.scaleY
-                        val velocity = dampedDragAnimation.velocity / 10f
-                        scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
-                        scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
+                        if (isLiquidGlass) {
+                            scaleX = dampedDragAnimation.scaleX
+                            scaleY = dampedDragAnimation.scaleY
+                            val velocity = dampedDragAnimation.velocity / 10f
+                            scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
+                            scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
+                        } else {
+                            scaleX = 1f
+                            scaleY = 1f
+                        }
                     },
                     onDrawSurface = {
                         val progress = dampedDragAnimation.pressProgress
@@ -711,6 +743,8 @@ fun LiquidButton(
         )
     }
 
+    val isLiquidGlass = LocalIsLiquidGlassEnabled.current
+
     Row(
         modifier
             .drawBackdrop(
@@ -719,32 +753,43 @@ fun LiquidButton(
                 effects = {
                     vibrancy()
                     blur(blurRadius.toPx())
-                    lens(lensRadius.toPx(), lensOffset.toPx(), chromaticAberration = chromaticAberration)
+                    if (isLiquidGlass) {
+                        lens(lensRadius.toPx(), lensOffset.toPx(), chromaticAberration = chromaticAberration)
+                    } else {
+                        lens(lensRadius.toPx() * 0.5f, lensOffset.toPx() * 0.5f, chromaticAberration = chromaticAberration)
+                    }
                 },
                 layerBlock = if (isInteractive) {
                     {
-                        val width = size.width
-                        val height = size.height
+                        if (isLiquidGlass) {
+                            val width = size.width
+                            val height = size.height
 
-                        val progress = interactiveHighlight.pressProgress
-                        val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
+                            val progress = interactiveHighlight.pressProgress
+                            val scale = lerp(1f, 1f + 4f.dp.toPx() / size.height, progress)
 
-                        val maxOffset = size.minDimension
-                        val initialDerivative = 0.05f
-                        val offset = interactiveHighlight.offset
-                        translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
-                        translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
+                            val maxOffset = size.minDimension
+                            val initialDerivative = 0.05f
+                            val offset = interactiveHighlight.offset
+                            translationX = maxOffset * tanh(initialDerivative * offset.x / maxOffset)
+                            translationY = maxOffset * tanh(initialDerivative * offset.y / maxOffset)
 
-                        val maxDragScale = 4f.dp.toPx() / size.height
-                        val offsetAngle = atan2(offset.y, offset.x)
-                        scaleX =
-                            scale +
-                                    maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) *
-                                    (width / height).coerceAtMost(1f)
-                        scaleY =
-                            scale +
-                                    maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) *
-                                    (height / width).coerceAtMost(1f)
+                            val maxDragScale = 4f.dp.toPx() / size.height
+                            val offsetAngle = atan2(offset.y, offset.x)
+                            scaleX =
+                                scale +
+                                        maxDragScale * abs(cos(offsetAngle) * offset.x / size.maxDimension) *
+                                        (width / height).coerceAtMost(1f)
+                            scaleY =
+                                scale +
+                                        maxDragScale * abs(sin(offsetAngle) * offset.y / size.maxDimension) *
+                                        (height / width).coerceAtMost(1f)
+                        } else {
+                            val progress = interactiveHighlight.pressProgress
+                            val scale = lerp(1f, 0.96f, progress)
+                            scaleX = scale
+                            scaleY = scale
+                        }
                     }
                 } else {
                     null
@@ -789,6 +834,7 @@ fun LiquidToggle(
     modifier: Modifier = Modifier
 ) {
     val isLightTheme = LocalIsLightTheme.current
+    val isLiquidGlass = LocalIsLiquidGlassEnabled.current
     val accentColor =
         if (isLightTheme) Color(0xFF34C759)
         else Color(0xFF30D158)
@@ -798,7 +844,7 @@ fun LiquidToggle(
 
     val density = LocalDensity.current
     val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
-    val dragWidth = with(density) { 20f.dp.toPx() }
+    val dragWidth = with(density) { (if (isLiquidGlass) 20f.dp else 36f.dp).toPx() }
     val animationScope = rememberCoroutineScope()
     var didDrag by remember { mutableStateOf(false) }
     var fraction by remember { mutableFloatStateOf(if (selected()) 1f else 0f) }
@@ -880,26 +926,38 @@ fun LiquidToggle(
                 }
                 .then(dampedDragAnimation.modifier)
                 .drawBackdrop(
-                    backdrop = rememberCombinedBackdrop(
-                        backdrop,
-                        rememberBackdrop(trackBackdrop) { drawBackdrop ->
-                            val progress = dampedDragAnimation.pressProgress
-                            val scaleX = lerp(2f / 3f, 0.75f, progress)
-                            val scaleY = lerp(0f, 0.75f, progress)
-                            scale(scaleX, scaleY) {
-                                drawBackdrop()
+                    backdrop = if (isLiquidGlass) {
+                        rememberCombinedBackdrop(
+                            backdrop,
+                            rememberBackdrop(trackBackdrop) { drawBackdrop ->
+                                val progress = dampedDragAnimation.pressProgress
+                                val scaleX = lerp(2f / 3f, 0.75f, progress)
+                                val scaleY = lerp(0f, 0.75f, progress)
+                                scale(scaleX, scaleY) {
+                                    drawBackdrop()
+                                }
                             }
-                        }
-                    ),
+                        )
+                    } else {
+                        rememberCombinedBackdrop(backdrop, trackBackdrop)
+                    },
                     shape = { Capsule() },
                     effects = {
                         val progress = dampedDragAnimation.pressProgress
                         blur(8f.dp.toPx() * (1f - progress))
-                        lens(
-                            5f.dp.toPx() * progress,
-                            10f.dp.toPx() * progress,
-                            chromaticAberration = true
-                        )
+                        if (isLiquidGlass) {
+                            lens(
+                                5f.dp.toPx() * progress,
+                                10f.dp.toPx() * progress,
+                                chromaticAberration = true
+                            )
+                        } else {
+                            lens(
+                                3f.dp.toPx(),
+                                5f.dp.toPx(),
+                                chromaticAberration = true
+                            )
+                        }
                     },
                     highlight = {
                         val progress = dampedDragAnimation.pressProgress
@@ -923,18 +981,23 @@ fun LiquidToggle(
                         )
                     },
                     layerBlock = {
-                        scaleX = dampedDragAnimation.scaleX
-                        scaleY = dampedDragAnimation.scaleY
-                        val velocity = dampedDragAnimation.velocity / 50f
-                        scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
-                        scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
+                        if (isLiquidGlass) {
+                            scaleX = dampedDragAnimation.scaleX
+                            scaleY = dampedDragAnimation.scaleY
+                            val velocity = dampedDragAnimation.velocity / 50f
+                            scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
+                            scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
+                        } else {
+                            scaleX = 1f
+                            scaleY = 1f
+                        }
                     },
                     onDrawSurface = {
                         val progress = dampedDragAnimation.pressProgress
                         drawRect(Color.White.copy(alpha = 1f - progress))
                     }
                 )
-                .size(40.dp, 24.dp)
+                .size(if (isLiquidGlass) 40.dp else 24.dp, 24.dp)
         )
     }
 }

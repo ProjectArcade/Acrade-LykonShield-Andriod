@@ -1,5 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-
+    <!-- Base application theme. -->
     <style name="Theme.LykonShield" parent="android:Theme.Material.Light.NoActionBar" />
+
+    <!-- Splash Screen theme. -->
+    <style name="Theme.LykonShield.Splash" parent="android:Theme.Material.Light.NoActionBar">
+        <!-- For Android 12+ -->
+        <item name="android:windowSplashScreenBackground">#F2F2F7</item>
+        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon_light</item>
+        <!-- For Android 11- -->
+        <item name="android:windowBackground">@drawable/splash_bg_light</item>
+    </style>
 </resources>
