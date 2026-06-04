@@ -339,6 +339,7 @@ fun ExcludeAppsScreen(
                 onClick = { navController.popBackStack() },
                 backdrop = screenContentBackdrop,
                 modifier = Modifier.size(44.dp),
+
                 shape = { CircleShape },
                 surfaceColor = Color.Transparent
             ) {

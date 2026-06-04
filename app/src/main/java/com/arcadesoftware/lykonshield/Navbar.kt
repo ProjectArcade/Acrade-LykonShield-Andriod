@@ -696,6 +696,10 @@ fun LiquidButton(
     isInteractive: Boolean = true,
     tint: Color = Color.Unspecified,
     surfaceColor: Color = Color.Unspecified,
+    blurRadius: androidx.compose.ui.unit.Dp = 2.dp,
+    lensRadius: androidx.compose.ui.unit.Dp = 12.dp,
+    lensOffset: androidx.compose.ui.unit.Dp = 24.dp,
+    chromaticAberration: Boolean = false,
     shape: () -> androidx.compose.ui.graphics.Shape = { Capsule() },
     content: @Composable RowScope.() -> Unit
 ) {
@@ -714,8 +718,8 @@ fun LiquidButton(
                 shape = shape,
                 effects = {
                     vibrancy()
-                    blur(2f.dp.toPx())
-                    lens(12f.dp.toPx(), 24f.dp.toPx())
+                    blur(blurRadius.toPx())
+                    lens(lensRadius.toPx(), lensOffset.toPx(), chromaticAberration = chromaticAberration)
                 },
                 layerBlock = if (isInteractive) {
                     {

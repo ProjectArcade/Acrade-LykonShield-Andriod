@@ -193,118 +193,98 @@ fun IosThemeDialog(
     val isLightTheme = LocalIsLightTheme.current
     val textColor = if (isLightTheme) Color.Black else Color.White
 
-    Column(
-        modifier = Modifier
-            .width(270.dp)
-            .clip(RoundedCornerShape(14.dp))
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { RoundedCornerShape(14.dp) },
-                effects = {
-                    vibrancy()
-                    blur(20f.dp.toPx())
-                },
-                highlight = {
-                    Highlight.Ambient.copy(alpha = 0.35f)
-                },
-                shadow = {
-                    Shadow(
-                        radius = 24.dp,
-                        color = Color.Black.copy(alpha = 0.25f)
-                    )
-                },
-                innerShadow = {
-                    InnerShadow(
-                        radius = 1.dp,
-                        alpha = 0.15f
-                    )
-                },
-                onDrawSurface = {
-                    drawRect(
-                        if (isLightTheme)
-                            Color.White.copy(alpha = 0.45f)
-                        else
-                            Color(0xFF2C2C2E).copy(alpha = 0.45f)
-                    )
-                }
-            )
+    LiquidButton(
+        onClick = {},
+        backdrop = backdrop,
+        modifier = Modifier.width(270.dp),
+        isInteractive = true,
+        surfaceColor = if (isLightTheme) Color.White.copy(alpha = 0.25f) else Color.Transparent,
+        blurRadius = 24.dp,
+        lensRadius = 24.dp,
+        lensOffset = 36.dp,
+        chromaticAberration = true,
+        shape = { RoundedCornerShape(14.dp) }
     ) {
-        Spacer(modifier = Modifier.height(20.dp))
+        Column(
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Spacer(modifier = Modifier.height(20.dp))
 
-        Text(
-            text = "Appearance",
-            fontWeight = FontWeight.Bold,
-            fontSize = 17.sp,
-            color = textColor,
-            modifier = Modifier.align(Alignment.CenterHorizontally)
-        )
+            Text(
+                text = "Appearance",
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                color = textColor,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
+            )
 
-        Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
-        Text(
-            text = "Choose how Lykon Shield looks on your device",
-            fontSize = 13.sp,
-            color = textColor.copy(alpha = 0.6f),
-            textAlign = TextAlign.Center,
-            modifier = Modifier
-                .align(Alignment.CenterHorizontally)
-                .padding(horizontal = 20.dp)
-        )
+            Text(
+                text = "Choose how Lykon Shield looks on your device",
+                fontSize = 13.sp,
+                color = textColor.copy(alpha = 0.6f),
+                textAlign = TextAlign.Center,
+                modifier = Modifier
+                    .align(Alignment.CenterHorizontally)
+                    .padding(horizontal = 20.dp)
+            )
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-        val options = listOf("Match System Theme", "Light Theme", "Dark Theme")
+            val options = listOf("Match System Theme", "Light Theme", "Dark Theme")
 
-        options.forEachIndexed { index, title ->
+            options.forEachIndexed { index, title ->
+                HorizontalDivider(
+                    color = if (isLightTheme)
+                        Color.Black.copy(alpha = 0.15f)
+                    else
+                        Color.White.copy(alpha = 0.15f)
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable {
+                            onThemeSelect(index)
+                            onDismiss()
+                        }
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(text = title, fontSize = 17.sp, color = textColor)
+                    if (currentTheme == index) {
+                        Text(
+                            text = "✓",
+                            color = Color(0xFF0A84FF),
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp
+                        )
+                    }
+                }
+            }
+
             HorizontalDivider(
                 color = if (isLightTheme)
                     Color.Black.copy(alpha = 0.15f)
                 else
                     Color.White.copy(alpha = 0.15f)
             )
-            Row(
+
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable {
-                        onThemeSelect(index)
-                        onDismiss()
-                    }
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .clickable(onClick = onDismiss)
+                    .padding(vertical = 14.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(text = title, fontSize = 17.sp, color = textColor)
-                if (currentTheme == index) {
-                    Text(
-                        text = "✓",
-                        color = Color(0xFF0A84FF),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 18.sp
-                    )
-                }
+                Text(
+                    text = "Cancel",
+                    color = Color.Red,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 17.sp
+                )
             }
-        }
-
-        HorizontalDivider(
-            color = if (isLightTheme)
-                Color.Black.copy(alpha = 0.15f)
-            else
-                Color.White.copy(alpha = 0.15f)
-        )
-
-        Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable(onClick = onDismiss)
-                .padding(vertical = 14.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                text = "Cancel",
-                color = Color.Red,
-                fontWeight = FontWeight.SemiBold,
-                fontSize = 17.sp
-            )
         }
     }
 }

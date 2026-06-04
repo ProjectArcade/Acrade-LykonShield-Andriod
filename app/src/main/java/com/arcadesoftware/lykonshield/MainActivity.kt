@@ -51,6 +51,7 @@ import androidx.navigation.compose.rememberNavController
 import com.arcadesoftware.lykonshield.ui.theme.LykonShieldTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 
 class MainActivity : ComponentActivity() {
@@ -69,6 +70,10 @@ class MainActivity : ComponentActivity() {
                 val isLightTheme = !isDark
                 CompositionLocalProvider(LocalIsLightTheme provides isLightTheme) {
                     val backdrop = rememberLayerBackdrop {
+                        drawRect(if (isLightTheme) Color(0xFFF2F2F7) else Color.Black)
+                        drawContent()
+                    }
+                    val backgroundBackdrop = rememberLayerBackdrop {
                         drawRect(if (isLightTheme) Color(0xFFF2F2F7) else Color.Black)
                         drawContent()
                     }
@@ -135,6 +140,11 @@ class MainActivity : ComponentActivity() {
                 ) {
                     Box(
                         modifier = Modifier
+                            .fillMaxSize()
+                            .layerBackdrop(backgroundBackdrop)
+                    )
+                    Box(
+                        modifier = Modifier
                             .layerBackdrop(backdrop)
                             .fillMaxSize()
                     ) {
@@ -151,7 +161,7 @@ class MainActivity : ComponentActivity() {
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
                                     topPadding = 56.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
-                                    backdrop = backdrop
+                                    backdrop = backgroundBackdrop
                                 )
                             }
                             composable("blocked") {
@@ -171,7 +181,7 @@ class MainActivity : ComponentActivity() {
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
                                     topPadding = 56.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
-                                    backdrop = backdrop
+                                    backdrop = backgroundBackdrop
                                 )
                             }
                             composable("developer") {
@@ -279,22 +289,27 @@ class MainActivity : ComponentActivity() {
                         androidx.activity.compose.BackHandler {
                             showThemeDialog = false
                         }
+                        val dialogBackdrop = rememberLayerBackdrop()
                         Box(
-                            modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.Black.copy(alpha = 0.5f))
-                                .clickable(
-                                    interactionSource = null,
-                                    indication = null,
-                                    onClick = { showThemeDialog = false }
-                                ),
+                            modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center
                         ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .layerBackdrop(dialogBackdrop)
+                                    .background(Color.Transparent)
+                                    .clickable(
+                                        interactionSource = null,
+                                        indication = null,
+                                        onClick = { showThemeDialog = false }
+                                    )
+                            )
                             IosThemeDialog(
                                 currentTheme = themeMode,
                                 onThemeSelect = { themeMode = it },
                                 onDismiss = { showThemeDialog = false },
-                                backdrop = backdrop
+                                backdrop = rememberCombinedBackdrop(backdrop, dialogBackdrop)
                             )
                         }
                     }
