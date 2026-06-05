@@ -334,7 +334,7 @@ fun ExcludeAppsScreen(
                         }
                     }
                 } else {
-                    items(finalApps) { app ->
+                    items(finalApps, key = { it.second }) { app ->
                         val isBypassed = excludedApps.contains(app.second)
                         GlassCard(
                             backdrop = backdrop,

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -277,6 +278,21 @@ fun SettingsScreen(
 }
 
 @Composable
+fun IosBaseDialogCard(
+    backdrop: Backdrop,
+    modifier: Modifier = Modifier.width(320.dp),
+    shape: androidx.compose.ui.graphics.Shape = RoundedCornerShape(28.dp),
+    content: @Composable BoxScope.() -> Unit
+) {
+    GlassCard(
+        backdrop = backdrop,
+        modifier = modifier,
+        shape = shape,
+        content = content
+    )
+}
+
+@Composable
 fun IosThemeDialog(
     currentTheme: Int,
     onThemeSelect: (Int) -> Unit,
@@ -287,10 +303,8 @@ fun IosThemeDialog(
     val textColor = if (isLightTheme) Color.Black else Color.White
     val systemBlue = if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)
 
-    GlassCard(
-        backdrop = backdrop,
-        modifier = Modifier.width(320.dp),
-        shape = RoundedCornerShape(28.dp)
+    IosBaseDialogCard(
+        backdrop = backdrop
     ) {
         Column(
             modifier = Modifier
@@ -420,10 +434,8 @@ fun IosDeveloperDetailsDialog(
     val textColor = if (isLightTheme) Color.Black else Color.White
     val systemBlue = if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)
 
-    GlassCard(
-        backdrop = backdrop,
-        modifier = Modifier.width(320.dp),
-        shape = RoundedCornerShape(28.dp)
+    IosBaseDialogCard(
+        backdrop = backdrop
     ) {
         Column(
             modifier = Modifier
@@ -511,13 +523,13 @@ fun IosDeveloperDetailsDialog(
                     .clip(RoundedCornerShape(12.dp))
                     .background(systemBlue)
                     .clickable { onDismiss() }
-                    .padding(vertical = 12.dp),
+                    .padding(vertical = 11.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = "Close",
                     color = Color.White,
-                    fontSize = 15.sp,
+                    fontSize = 14.sp,
                     fontWeight = FontWeight.Bold
                 )
             }

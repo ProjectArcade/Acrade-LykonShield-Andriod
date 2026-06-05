@@ -216,8 +216,8 @@ object DnsPacketParser {
         // 9. Write the answer section
         responseBuf.position(questionEnd)
 
-        // Name: compression pointer to QNAME at the start of the question section
-        val qnameOffset = dnsStart + DNS_HEADER_LEN
+        // Name: compression pointer to QNAME at the start of the question section (offset 12)
+        val qnameOffset = DNS_HEADER_LEN
         responseBuf.putShort((0xC000 or qnameOffset).toShort())
 
         // TYPE
