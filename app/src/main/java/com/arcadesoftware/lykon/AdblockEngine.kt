@@ -46,6 +46,7 @@ object AdblockEngine {
         const val UBLOCK_FILTERS_URL = "https://raw.githubusercontent.com/uBlockOrigin/uAssets/master/filters/filters.txt"
         const val PETER_LOWE_URL = "https://pgl.yoyo.org/adservers/serverlist.php?hostformat=adblockplus&showintro=0"
         const val OISD_URL = "https://abp.oisd.nl/basic/"
+        const val MALWARE_URL = "https://malware-filter.gitlab.io/malware-filter/phishing-filter-hosts.txt"
     }
 
     // ── Filter file names (used in both assets and internal storage) ─────
@@ -74,6 +75,11 @@ object AdblockEngine {
     @Volatile
     private var domainBlockerReady = false
 
+    @Volatile
+    private var currentFilterLevel = 1 // 0=Light, 1=Medium, 2=Ultra
+
+    private var appContext: Context? = null
+
     private val initStarted = AtomicBoolean(false)
     private val readyLatch = CountDownLatch(1)
 
@@ -81,6 +87,7 @@ object AdblockEngine {
 
     private val blockedDomains = ConcurrentHashMap.newKeySet<String>()
     private val allowedDomains = ConcurrentHashMap.newKeySet<String>()
+    val malwareDomains = ConcurrentHashMap.newKeySet<String>()
     private val loadedRuleCount = AtomicInteger(0)
 
     // --- Bloom Filter (Verification and Optimization layer) ---
@@ -152,7 +159,7 @@ object AdblockEngine {
     // --- Block Categories ---
 
     enum class BlockCategory {
-        AD, TRACKER, ANALYTICS, PRIVACY, OTHER
+        AD, TRACKER, ANALYTICS, PRIVACY, MALWARE, OTHER
     }
 
     private val adKeywords = listOf(
@@ -189,7 +196,9 @@ object AdblockEngine {
      * triggers initialization. The Kotlin domain blocker initializes synchronously
      * and quickly (~200ms); the native Rust engine loads asynchronously.
      */
-    fun init(context: Context) {
+    fun init(context: Context, filterLevel: Int = 1) {
+        appContext = context.applicationContext
+        currentFilterLevel = filterLevel
         if (!initStarted.compareAndSet(false, true)) return
         state = EngineState.INITIALIZING
         observableState.value = EngineState.INITIALIZING
@@ -198,9 +207,15 @@ object AdblockEngine {
             try {
                 // Step 1: Build/Load fast domain blocker (primary)
                 val startTime = System.currentTimeMillis()
+                
                 val cacheLoaded = loadCache(context)
+                val testDomains = listOf("lykonshield-malware-test.com", "unsafe-site-test.com", "malware-test.com")
+                blockedDomains.addAll(testDomains)
+                malwareDomains.addAll(testDomains)
+                
                 if (cacheLoaded) {
                     domainBlockerReady = true
+                    testDomains.forEach { bloomFilter.add(it) }
                     val domainLoadTime = System.currentTimeMillis() - startTime
                     Log.d(TAG, "Domain blocker ready (loaded from cache) in ${domainLoadTime}ms: ${blockedDomains.size} domains, " +
                             "${allowedDomains.size} allowlisted, ${dohProviderDomains.size} DoH providers blocked")
@@ -260,6 +275,7 @@ object AdblockEngine {
         // Clear existing data
         blockedDomains.clear()
         allowedDomains.clear()
+        malwareDomains.clear()
         loadedRuleCount.set(0)
         bloomFilter.clear()
 
@@ -286,6 +302,25 @@ object AdblockEngine {
                 Log.d(TAG, "Native Rust engine reloaded: $nativeReady")
             } catch (e: Exception) {
                 Log.w(TAG, "Native engine reload failed", e)
+            }
+        }
+    }
+
+    /**
+     * Change the filter level and trigger a reload.
+     */
+    fun setFilterLevel(level: Int) {
+        if (currentFilterLevel != level) {
+            currentFilterLevel = level
+            appContext?.let {
+                // Clear cache so it rebuilds from text
+                val cacheFile = java.io.File(it.filesDir, "filters.cache")
+                if (cacheFile.exists()) cacheFile.delete()
+                
+                // If init has already started, we reload filters
+                if (initStarted.get()) {
+                    Thread({ reloadFilters(it) }, "adblock-reload").start()
+                }
             }
         }
     }
@@ -426,11 +461,19 @@ object AdblockEngine {
     fun categorize(domain: String): BlockCategory {
         val lower = domain.lowercase()
         return when {
+            isMalware(domain) -> BlockCategory.MALWARE
             adKeywords.any { lower.contains(it) } -> BlockCategory.AD
             trackerKeywords.any { lower.contains(it) } -> BlockCategory.TRACKER
             analyticsKeywords.any { lower.contains(it) } -> BlockCategory.ANALYTICS
             else -> BlockCategory.OTHER
         }
+    }
+
+    /**
+     * Returns true if the domain is a known malware domain
+     */
+    fun isMalware(domain: String): Boolean {
+        return isInDomainSet(domain, malwareDomains)
     }
 
     /**
@@ -444,12 +487,23 @@ object AdblockEngine {
     // Filter Loading Implementation
     // ==========================================================================
 
+    private fun getFilesForLevel(level: Int): List<String> {
+        val files = mutableListOf("easylist.txt", "easyprivacy.txt", "peter-lowe.txt", "malware.txt") // Light
+        if (level >= 1) { // Medium
+            files.add("ublock-filters.txt")
+        }
+        if (level >= 2) { // Ultra
+            files.add("oisd-basic.txt")
+        }
+        return files
+    }
+
     /**
      * Load all filter lists — checks internal storage first (for updated lists
      * downloaded by FilterListUpdater), then falls back to bundled assets.
      */
     private fun loadAllFilters(context: Context) {
-        val allFiles = FILTER_FILES + EXTRA_FILTER_FILES
+        val allFiles = getFilesForLevel(currentFilterLevel)
 
         for (file in allFiles) {
             try {
@@ -458,13 +512,13 @@ object AdblockEngine {
                     // Load from internal storage (updated list)
                     Log.d(TAG, "Loading filter from storage: $file (${storageFile.length()} bytes)")
                     storageFile.bufferedReader().use { reader ->
-                        parseFilterLines(reader)
+                        parseFilterLines(reader, file == "malware.txt")
                     }
-                } else if (file in FILTER_FILES) {
-                    // Fall back to bundled assets (only for the 3 core lists)
+                } else if (file in FILTER_FILES || file == "malware.txt") {
+                    // Fall back to bundled assets (only for the core lists)
                     Log.d(TAG, "Loading filter from assets: $file")
                     context.assets.open(file).use { input ->
-                        parseFilterLines(input.bufferedReader())
+                        parseFilterLines(input.bufferedReader(), file == "malware.txt")
                     }
                 }
                 // Extra files (peter-lowe, oisd) are only loaded if downloaded
@@ -472,6 +526,9 @@ object AdblockEngine {
                 Log.e(TAG, "Failed to parse filter list: $file", e)
             }
         }
+        val testDomains = listOf("lykonshield-malware-test.com", "unsafe-site-test.com", "malware-test.com")
+        blockedDomains.addAll(testDomains)
+        malwareDomains.addAll(testDomains)
     }
 
     /**
@@ -479,7 +536,7 @@ object AdblockEngine {
      * complete filter list contents as strings.
      */
     private fun loadFilterTexts(context: Context): List<String> {
-        val allFiles = FILTER_FILES + EXTRA_FILTER_FILES
+        val allFiles = getFilesForLevel(currentFilterLevel)
         val filters = mutableListOf<String>()
 
         for (file in allFiles) {
@@ -505,7 +562,7 @@ object AdblockEngine {
      * into the fast HashSet. Mirrors the parsing logic from Arcade-Lykon
      * browser FilterManager._parseFilterList().
      */
-    private fun parseFilterLines(reader: BufferedReader) {
+    private fun parseFilterLines(reader: BufferedReader, isMalware: Boolean = false) {
         reader.forEachLine { rawLine ->
             val line = rawLine.trim()
             if (line.isEmpty()) return@forEachLine
@@ -515,10 +572,12 @@ object AdblockEngine {
             // Skip comments, metadata, cosmetic rules
             if (line.startsWith("!") ||
                 line.startsWith("[") ||
+                line.startsWith("#") ||
+                line.startsWith(";") ||
                 line.contains("##") ||
                 line.contains("#@#") ||
                 line.contains("#?#") ||
-                line.contains("#\$#")) {
+                line.contains("#$#")) {
                 return@forEachLine
             }
 
@@ -528,7 +587,7 @@ object AdblockEngine {
 
             // Check if there are options after $
             val dollarIdx = ruleLine.lastIndexOf('$')
-            val options = if (dollarIdx != -1 && !ruleLine.contains("\$/")) {
+            val options = if (dollarIdx != -1 && !ruleLine.contains("$/")) {
                 ruleLine.substring(dollarIdx + 1)
             } else {
                 ""
@@ -548,7 +607,7 @@ object AdblockEngine {
                 }
             }
 
-            val effectiveLine = if (dollarIdx != -1 && !ruleLine.contains("\$/")) {
+            val effectiveLine = if (dollarIdx != -1 && !ruleLine.contains("$/")) {
                 ruleLine.substring(0, dollarIdx)
             } else {
                 ruleLine
@@ -561,22 +620,60 @@ object AdblockEngine {
                 effectiveLine.endsWith("^") &&
                 !effectiveLine.contains("*") &&
                 !effectiveLine.contains("/")) {
-
                 val domain = effectiveLine.substring(2, effectiveLine.length - 1)
                 if (domain.isNotEmpty() && domain.contains(".")) {
                     if (isAllowlist) {
                         allowedDomains.add(domain.lowercase())
                     } else {
                         blockedDomains.add(domain.lowercase())
+                        if (isMalware) malwareDomains.add(domain.lowercase())
+                    }
+                }
+                return@forEachLine
+            }
+
+            // Also handle hosts-file format: "0.0.0.0 domain" or "127.0.0.1 domain" (supporting spaces, tabs, and comments)
+            if (!isAllowlist && (line.startsWith("0.0.0.0") || line.startsWith("127.0.0.1"))) {
+                val parts = line.split(Regex("\\s+"))
+                if (parts.size >= 2) {
+                    val domain = parts[1].trim()
+                    if (domain.isNotEmpty() && domain.contains(".") && !domain.startsWith("#") && !domain.startsWith(";")) {
+                        blockedDomains.add(domain.lowercase())
+                        if (isMalware) malwareDomains.add(domain.lowercase())
+                        return@forEachLine
                     }
                 }
             }
 
-            // Also handle hosts-file format: "0.0.0.0 domain" or "127.0.0.1 domain"
-            if (!isAllowlist && (line.startsWith("0.0.0.0 ") || line.startsWith("127.0.0.1 "))) {
-                val domain = line.substringAfter(" ").trim()
-                if (domain.isNotEmpty() && domain.contains(".") && !domain.startsWith("#")) {
-                    blockedDomains.add(domain.lowercase())
+            // Fallback for plain domain names (especially in malware.txt or custom hosts)
+            if (!isAllowlist) {
+                var cleanLine = effectiveLine
+                val hashIdx = cleanLine.indexOf('#')
+                if (hashIdx != -1) {
+                    cleanLine = cleanLine.substring(0, hashIdx)
+                }
+                val semiIdx = cleanLine.indexOf(';')
+                if (semiIdx != -1) {
+                    cleanLine = cleanLine.substring(0, semiIdx)
+                }
+                cleanLine = cleanLine.trim()
+
+                // Check if it's a valid domain: no spaces, contains a dot, no path/wildcard characters, no protocol
+                if (cleanLine.isNotEmpty() && 
+                    cleanLine.contains(".") && 
+                    !cleanLine.contains(" ") && 
+                    !cleanLine.contains("\t") && 
+                    !cleanLine.contains("/") && 
+                    !cleanLine.contains("*") && 
+                    !cleanLine.contains("?") && 
+                    !cleanLine.contains(":") && 
+                    !cleanLine.contains("|") && 
+                    !cleanLine.contains("^") && 
+                    !cleanLine.contains("@") && 
+                    !cleanLine.contains("[") && 
+                    !cleanLine.contains("]")) {
+                    blockedDomains.add(cleanLine.lowercase())
+                    if (isMalware) malwareDomains.add(cleanLine.lowercase())
                 }
             }
         }
@@ -590,17 +687,17 @@ object AdblockEngine {
      *   sub.ads.example.com → ads.example.com → example.com
      */
     private fun isDomainBlocked(domain: String): Boolean {
-        val lower = domain.lowercase()
-        val parts = lower.split(".")
-        // Check from full domain down to base domain
-        for (i in parts.indices) {
-            if (i >= parts.size - 1) break // Don't check TLD alone
-            val candidate = parts.subList(i, parts.size).joinToString(".")
+        var current = domain.lowercase()
+        while (current.isNotEmpty()) {
             // Bloom filter pre-check to speed up and verify
-            if (bloomFilter.contains(candidate)) {
+            if (bloomFilter.contains(current)) {
                 // Secondary check: confirm in HashSet to avoid false positives
-                if (blockedDomains.contains(candidate)) return true
+                if (blockedDomains.contains(current)) return true
             }
+            val dotIndex = current.indexOf('.')
+            if (dotIndex == -1) break
+            current = current.substring(dotIndex + 1)
+            if (!current.contains('.')) break // Don't check TLD alone
         }
         return false
     }
@@ -609,12 +706,14 @@ object AdblockEngine {
      * Check if a domain matches any entry in a domain set (with subdomain matching).
      */
     private fun isInDomainSet(domain: String, domainSet: Set<String>): Boolean {
-        val lower = domain.lowercase()
-        if (domainSet.contains(lower)) return true
-        val parts = lower.split(".")
-        for (i in 1 until parts.size - 1) {
-            val parent = parts.subList(i, parts.size).joinToString(".")
-            if (domainSet.contains(parent)) return true
+        var current = domain.lowercase()
+        if (domainSet.contains(current)) return true
+        while (true) {
+            val dotIndex = current.indexOf('.')
+            if (dotIndex == -1) break
+            current = current.substring(dotIndex + 1)
+            if (!current.contains('.')) break
+            if (domainSet.contains(current)) return true
         }
         return false
     }
@@ -643,11 +742,13 @@ object AdblockEngine {
         try {
             val cacheFile = java.io.File(context.filesDir, "filters.cache")
             cacheFile.bufferedWriter().use { writer ->
-                writer.write("1\n") // Cache version code
+                writer.write("3\n") // Cache version code
                 writer.write("${blockedDomains.size}\n")
                 blockedDomains.forEach { writer.write("$it\n") }
                 writer.write("${allowedDomains.size}\n")
                 allowedDomains.forEach { writer.write("$it\n") }
+                writer.write("${malwareDomains.size}\n")
+                malwareDomains.forEach { writer.write("$it\n") }
             }
             Log.d(TAG, "Saved filters cache: ${cacheFile.length()} bytes")
         } catch (e: Exception) {
@@ -663,7 +764,7 @@ object AdblockEngine {
             cacheFile.bufferedReader().use { reader ->
                 val versionLine = reader.readLine() ?: return false
                 val version = versionLine.trim().toIntOrNull() ?: return false
-                if (version != 1) return false
+                if (version != 3) return false
 
                 val blockedSizeLine = reader.readLine() ?: return false
                 val blockedSize = blockedSizeLine.trim().toIntOrNull() ?: return false
@@ -681,11 +782,22 @@ object AdblockEngine {
                     allowed.add(line.trim())
                 }
 
+                val malwareSizeLine = reader.readLine() ?: return false
+                val malwareSize = malwareSizeLine.trim().toIntOrNull() ?: return false
+                val malware = ArrayList<String>(malwareSize)
+                for (i in 0 until malwareSize) {
+                    val line = reader.readLine() ?: return false
+                    malware.add(line.trim())
+                }
+
                 blockedDomains.clear()
                 blockedDomains.addAll(blocked)
 
                 allowedDomains.clear()
                 allowedDomains.addAll(allowed)
+
+                malwareDomains.clear()
+                malwareDomains.addAll(malware)
 
                 // Populate Bloom Filter
                 bloomFilter.clear()

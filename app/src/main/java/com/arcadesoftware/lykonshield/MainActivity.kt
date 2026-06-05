@@ -60,27 +60,55 @@ class MainActivity : ComponentActivity() {
         setTheme(R.style.Theme_LykonShield)
         super.onCreate(savedInstanceState)
         
-        // Initialize adblocker engine and stats manager
-        AdblockEngine.init(applicationContext)
-        ShieldStatsManager.init(applicationContext)
+        // Request POST_NOTIFICATIONS permission at runtime on Android 13+ (API 33)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+            val requestPermissionLauncher = registerForActivityResult(
+                androidx.activity.result.contract.ActivityResultContracts.RequestPermission()
+            ) { isGranted: Boolean ->
+                if (isGranted) {
+                    android.util.Log.d("MainActivity", "Notification permission granted")
+                } else {
+                    android.util.Log.w("MainActivity", "Notification permission denied")
+                }
+            }
+            if (androidx.core.content.ContextCompat.checkSelfPermission(
+                    this,
+                    android.Manifest.permission.POST_NOTIFICATIONS
+                ) != android.content.pm.PackageManager.PERMISSION_GRANTED
+            ) {
+                requestPermissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
         
         val prefs = getSharedPreferences("lykon_shield_prefs", MODE_PRIVATE)
+        val initialBlockerLevel = prefs.getInt("blocker_level", 1)
+        
+        // Initialize adblocker engine and stats manager
+        AdblockEngine.init(applicationContext, initialBlockerLevel)
+        ShieldStatsManager.init(applicationContext)
+        
         enableEdgeToEdge()
         setContent {
             val initialThemeMode = remember { prefs.getInt("theme_mode", 0) }
             val initialLiquidGlass = remember { prefs.getBoolean("liquid_glass_enabled", true) }
+            val initialBlockerLevel = remember { prefs.getInt("blocker_level", 1) }
             val initialProtection = remember { prefs.getBoolean("protection_enabled", false) }
             val initialExcludedApps = remember { prefs.getStringSet("excluded_apps", emptySet()) ?: emptySet() }
 
             var themeMode by remember { mutableIntStateOf(initialThemeMode) }
             var showThemeDialog by rememberSaveable { mutableStateOf(false) }
             var isLiquidGlassEnabled by remember { mutableStateOf(initialLiquidGlass) }
+            var blockerLevel by remember { mutableIntStateOf(initialBlockerLevel) }
 
             LaunchedEffect(themeMode) {
                 prefs.edit().putInt("theme_mode", themeMode).apply()
             }
             LaunchedEffect(isLiquidGlassEnabled) {
                 prefs.edit().putBoolean("liquid_glass_enabled", isLiquidGlassEnabled).apply()
+            }
+            LaunchedEffect(blockerLevel) {
+                prefs.edit().putInt("blocker_level", blockerLevel).apply()
+                AdblockEngine.setFilterLevel(blockerLevel)
             }
 
             val isDark = when (themeMode) {
@@ -124,9 +152,12 @@ class MainActivity : ComponentActivity() {
                     }
                 }
 
-                LaunchedEffect(selectedTabIndex) {
-                    val route = tabs[selectedTabIndex]
-                    if (route != currentRoute && route in listOf("home", "blocked", "settings")) {
+                val navigateToTab = { idx: Int ->
+                    selectedTabIndex = idx
+                    val route = tabs[idx]
+                    val activeRoute = navController.currentBackStackEntry?.destination?.route ?: "home"
+                    android.util.Log.d("MainActivity", "navigateToTab: idx=$idx, route=$route, activeRoute=$activeRoute")
+                    if (route != activeRoute) {
                         navController.navigate(route) {
                             popUpTo(navController.graph.startDestinationId) {
                                 saveState = true
@@ -249,6 +280,9 @@ class MainActivity : ComponentActivity() {
                                     isProtectionEnabled = isProtectionEnabled,
                                     onProtectionToggle = toggleProtection,
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
+                                    blockerLevel = blockerLevel,
+                                    onBlockerLevelChange = { blockerLevel = it },
+                                    onLearnMoreClick = { navController.navigate("faq") },
                                     topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
                                     backdrop = backgroundBackdrop
@@ -271,6 +305,24 @@ class MainActivity : ComponentActivity() {
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
                                     isLiquidGlassEnabled = isLiquidGlassEnabled,
                                     onLiquidGlassToggle = { isLiquidGlassEnabled = it },
+                                    onUpdateFilterClick = { navController.navigate("update_filter") },
+                                    onFaqClick = { navController.navigate("faq") },
+                                    topPadding = 12.dp + statusBarPadding,
+                                    bottomPadding = 88.dp + navBarPadding,
+                                    backdrop = backgroundBackdrop
+                                )
+                            }
+                            composable("update_filter") {
+                                UpdateFilterScreen(
+                                    onBackClick = { navController.navigateUp() },
+                                    topPadding = 12.dp + statusBarPadding,
+                                    bottomPadding = 88.dp + navBarPadding,
+                                    backdrop = backgroundBackdrop
+                                )
+                            }
+                            composable("faq") {
+                                FaqScreen(
+                                    onBackClick = { navController.navigateUp() },
                                     topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
                                     backdrop = backgroundBackdrop
@@ -326,12 +378,12 @@ class MainActivity : ComponentActivity() {
                         ) {
                             LiquidBottomTabs(
                                 selectedTabIndex = { selectedTabIndex },
-                                onTabSelected = { selectedTabIndex = it },
+                                onTabSelected = navigateToTab,
                                 backdrop = backdrop,
                                 tabsCount = 3,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                LiquidBottomTab(onClick = { selectedTabIndex = 0 }) {
+                                LiquidBottomTab(onClick = { navigateToTab(0) }) {
                                     val isSelected = selectedTabIndex == 0
                                     val iconColor = if (isSelected) (if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)) else Color(0xFF8E8E93)
                                     Icon(
@@ -345,7 +397,7 @@ class MainActivity : ComponentActivity() {
                                         fontSize = 11.sp
                                     )
                                 }
-                                LiquidBottomTab(onClick = { selectedTabIndex = 1 }) {
+                                LiquidBottomTab(onClick = { navigateToTab(1) }) {
                                     val isSelected = selectedTabIndex == 1
                                     val iconColor = if (isSelected) (if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)) else Color(0xFF8E8E93)
                                     Icon(
@@ -359,7 +411,7 @@ class MainActivity : ComponentActivity() {
                                         fontSize = 11.sp
                                     )
                                 }
-                                LiquidBottomTab(onClick = { selectedTabIndex = 2 }) {
+                                LiquidBottomTab(onClick = { navigateToTab(2) }) {
                                     val isSelected = selectedTabIndex == 2
                                     val iconColor = if (isSelected) (if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)) else Color(0xFF8E8E93)
                                     Icon(

@@ -43,6 +43,8 @@ fun SettingsScreen(
     onExcludeAppsClick: () -> Unit,
     isLiquidGlassEnabled: Boolean,
     onLiquidGlassToggle: (Boolean) -> Unit,
+    onUpdateFilterClick: () -> Unit,
+    onFaqClick: () -> Unit,
     topPadding: androidx.compose.ui.unit.Dp,
     bottomPadding: androidx.compose.ui.unit.Dp,
     backdrop: Backdrop
@@ -195,7 +197,9 @@ fun SettingsScreen(
                             .background(cardBg)
                     ) {
                         SettingsRow(title = "App Version", value = "1.0.6", showDivider = true)
-                        SettingsRow(title = "Developer", value = "Arcade Software", showDivider = false)
+                        SettingsRow(title = "Developer", value = "Arcade Software", showDivider = true)
+                        ClickableSettingsRow(title = "Update Shields Filter", onClick = onUpdateFilterClick, showDivider = true)
+                        ClickableSettingsRow(title = "FAQ & Help", onClick = onFaqClick, showDivider = false)
                     }
                 }
             }
@@ -404,6 +408,38 @@ fun SettingsSwitchRow(
                 onSelect = onCheckedChange,
                 backdrop = backdrop
             )
+        }
+        if (showDivider) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .padding(start = 16.dp)
+                    .background(if (isLightTheme) Color(0xFFC7C7CC) else Color(0xFF38383A))
+            )
+        }
+    }
+}
+
+@Composable
+fun ClickableSettingsRow(
+    title: String,
+    onClick: () -> Unit,
+    showDivider: Boolean
+) {
+    val isLightTheme = LocalIsLightTheme.current
+    val textColor = if (isLightTheme) Color.Black else Color.White
+
+    Column(modifier = Modifier.fillMaxWidth().clickable { onClick() }) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(text = title, color = textColor, fontSize = 16.sp)
+            Text(text = "〉", color = Color.Gray, fontSize = 14.sp)
         }
         if (showDivider) {
             Box(

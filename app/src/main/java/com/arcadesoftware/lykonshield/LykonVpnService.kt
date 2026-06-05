@@ -281,9 +281,15 @@ class LykonVpnService : VpnService() {
         val packageName = getAppPackageForConnection(srcPort, destIpStr, PROTO_UDP) ?: "system"
 
         val shouldBlock = AdblockEngine.shouldBlockDomain(domain)
-        Log.d(TAG, "DNS Query from $packageName: $domain -> shouldBlock = $shouldBlock")
+        val isMalware = AdblockEngine.isMalware(domain)
 
-        if (shouldBlock) {
+        Log.d(TAG, "DNS Query from $packageName: $domain -> shouldBlock = $shouldBlock, isMalware = $isMalware")
+
+        if (isMalware) {
+            showMalwareWarning(domain)
+        }
+
+        if (shouldBlock && !isMalware) {
             val queryType = DnsPacketParser.getQueryType(buffer, ipHeaderLen, udpHeaderLen)
             val response = when (queryType) {
                 DnsPacketParser.DNS_TYPE_A ->
@@ -555,27 +561,66 @@ class LykonVpnService : VpnService() {
         return filteredServers
     }
 
-    private fun getAppPackageForConnection(srcPort: Int, destIpStr: String, protocol: Int): String? {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q) return null
+    private val uidPackageCache = java.util.concurrent.ConcurrentHashMap<Int, String>()
+    private val lastNotificationTimes = java.util.concurrent.ConcurrentHashMap<String, Long>()
+
+    private fun getAppPackageForConnection(port: Int, destIp: String, protocol: Int): String? {
         return try {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-            val remote = InetSocketAddress(InetAddress.getByName(destIpStr), PORT_DNS)
-            val localIps = listOf("10.0.0.2", "0.0.0.0", "::")
-            for (ip in localIps) {
-                try {
-                    val local = InetSocketAddress(InetAddress.getByName(ip), srcPort)
-                    val uid = cm.getConnectionOwnerUid(protocol, local, remote)
-                    if (uid != -1) {
-                        val pkg = packageManager.getPackagesForUid(uid)?.firstOrNull()
-                        if (pkg != null) return pkg
-                    }
-                } catch (_: Exception) {}
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val connectionOwnerUid = cm.getConnectionOwnerUid(
+                    protocol,
+                    InetSocketAddress(InetAddress.getByName(VPN_ADDRESS), 0),
+                    InetSocketAddress(InetAddress.getByName(destIp), port)
+                )
+                if (connectionOwnerUid != android.os.Process.INVALID_UID) {
+                    val pm = packageManager
+                    val packages = pm.getPackagesForUid(connectionOwnerUid)
+                    return packages?.firstOrNull()
+                }
             }
             null
         } catch (e: Exception) {
-            Log.w(TAG, "Failed to get connection owner UID", e)
             null
         }
+    }
+
+    private fun showMalwareWarning(domain: String) {
+        val now = System.currentTimeMillis()
+        val lastShown = lastNotificationTimes[domain] ?: 0L
+        if (now - lastShown < 30_000L) { // 30 seconds cooldown per domain to avoid spam
+            return
+        }
+        lastNotificationTimes[domain] = now
+
+        val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val channelId = "malware_alerts"
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val channel = NotificationChannel(channelId, "Security Threats", NotificationManager.IMPORTANCE_HIGH).apply {
+                description = "Critical alerts for blocked malware and phishing sites"
+                enableLights(true)
+                lightColor = android.graphics.Color.RED
+                enableVibration(true)
+                lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
+            }
+            notificationManager.createNotificationChannel(channel)
+        }
+
+        val detailsText = "LykonShield detected access to $domain which is marked as unsafe. " +
+                          "Please be careful when browsing, as this domain is flagged for malware and security threats."
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setSmallIcon(android.R.drawable.ic_dialog_alert)
+            .setContentTitle("LykonShield: Unsafe Site Warning")
+            .setContentText("This site ($domain) is marked as unsafe. Be careful!")
+            .setStyle(NotificationCompat.BigTextStyle().bigText(detailsText))
+            .setPriority(NotificationCompat.PRIORITY_HIGH)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setColor(android.graphics.Color.parseColor("#E53935")) // Crimson red accent
+            .setAutoCancel(true)
+            .build()
+
+        notificationManager.notify(domain.hashCode(), notification)
     }
 
     private fun startForegroundNotification() {

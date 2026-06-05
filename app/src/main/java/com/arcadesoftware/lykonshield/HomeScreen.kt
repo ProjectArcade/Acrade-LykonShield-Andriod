@@ -15,6 +15,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowForward
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -149,6 +150,9 @@ fun HomeScreen(
     isProtectionEnabled: Boolean,
     onProtectionToggle: () -> Unit,
     onExcludeAppsClick: () -> Unit,
+    blockerLevel: Int,
+    onBlockerLevelChange: (Int) -> Unit,
+    onLearnMoreClick: () -> Unit,
     topPadding: androidx.compose.ui.unit.Dp,
     bottomPadding: androidx.compose.ui.unit.Dp,
     backdrop: Backdrop
@@ -272,6 +276,15 @@ fun HomeScreen(
             UnifiedShieldCard(
                 enabled = isProtectionEnabled,
                 onToggle = onProtectionToggle,
+                backdrop = backdrop
+            )
+        }
+
+        item {
+            BlockerFilterCard(
+                value = blockerLevel,
+                onValueChange = onBlockerLevelChange,
+                onLearnMoreClick = onLearnMoreClick,
                 backdrop = backdrop
             )
         }
@@ -943,5 +956,81 @@ fun StatsRow(
             Text(text = title, color = textColor, fontSize = 16.sp)
         }
         Text(text = value, color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+fun BlockerFilterCard(
+    value: Int,
+    onValueChange: (Int) -> Unit,
+    onLearnMoreClick: () -> Unit,
+    backdrop: Backdrop
+) {
+    val isLightTheme = LocalIsLightTheme.current
+    val textColor = if (isLightTheme) Color.Black else Color.White
+    val subtitleColor = if (isLightTheme) Color.Gray else Color.LightGray
+
+    val levelTitle = when (value) {
+        0 -> "Light"
+        1 -> "Medium"
+        else -> "Ultra"
+    }
+    
+    val blockedDesc = when (value) {
+        0 -> "Ads & Trackers Blocked"
+        1 -> "Ads, Trackers & Annoyances Blocked"
+        else -> "Maximum Protection (All Threats Blocked)"
+    }
+
+    GlassCard(
+        backdrop = backdrop,
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(24.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    Text(
+                        text = "$levelTitle Filter",
+                        color = textColor,
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = blockedDesc,
+                        color = subtitleColor,
+                        fontSize = 13.sp
+                    )
+                }
+                androidx.compose.foundation.layout.Box(
+                    modifier = Modifier
+                        .size(32.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFF0A84FF).copy(alpha = 0.15f))
+                        .clickable { onLearnMoreClick() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    androidx.compose.material3.Icon(
+                        imageVector = androidx.compose.material.icons.Icons.Default.Info,
+                        contentDescription = "Learn More",
+                        tint = Color(0xFF0A84FF),
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+            }
+            
+            LiquidSlider(
+                value = { value },
+                onValueChange = onValueChange,
+                backdrop = backdrop,
+                modifier = Modifier.fillMaxWidth()
+            )
+        }
     }
 }

@@ -13,6 +13,7 @@ import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.border
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.material3.Text
@@ -439,8 +440,9 @@ fun LiquidBottomTabs(
         contentAlignment = Alignment.CenterStart
     ) {
         val density = LocalDensity.current
+        val maxWidthPx = constraints.maxWidth.toFloat()
         val tabWidth = with(density) {
-            (constraints.maxWidth.toFloat() - 8f.dp.toPx()) / tabsCount
+            (maxWidthPx - 8f.dp.toPx()) / tabsCount
         }
 
         val offsetAnimation = remember { Animatable(0f) }
@@ -455,7 +457,7 @@ fun LiquidBottomTabs(
 
         val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
         val animationScope = rememberCoroutineScope()
-        var currentIndex by remember(selectedTabIndex) {
+        var currentIndex by remember {
             mutableIntStateOf(selectedTabIndex())
         }
         val dampedDragAnimation = remember(animationScope) {
@@ -469,6 +471,7 @@ fun LiquidBottomTabs(
                 onDragStarted = {},
                 onDragStopped = {
                     val targetIndex = targetValue.roundToInt().coerceIn(0, tabsCount - 1)
+                    android.util.Log.d("Navbar", "onDragStopped: targetValue=$targetValue, targetIndex=$targetIndex")
                     currentIndex = targetIndex
                     animateToValue(targetIndex.toFloat())
                     animationScope.launch {
@@ -486,7 +489,9 @@ fun LiquidBottomTabs(
                 }
             )
         }
-        LaunchedEffect(selectedTabIndex) {
+        val currentOnTabSelected by rememberUpdatedState(onTabSelected)
+
+        LaunchedEffect(dampedDragAnimation) {
             snapshotFlow { selectedTabIndex() }
                 .collectLatest { index ->
                     currentIndex = index
@@ -496,8 +501,9 @@ fun LiquidBottomTabs(
             snapshotFlow { currentIndex }
                 .drop(1)
                 .collectLatest { index ->
+                    android.util.Log.d("Navbar", "LaunchedEffect: currentIndex changed to $index, navigating...")
                     dampedDragAnimation.animateToValue(index.toFloat())
-                    onTabSelected(index)
+                    currentOnTabSelected(index)
                 }
         }
 
@@ -514,9 +520,14 @@ fun LiquidBottomTabs(
             )
         }
 
-        Row(
+        Box(
             Modifier
-                .graphicsLayer { translationX = panelOffset }
+                .fillMaxWidth(),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Row(
+                Modifier
+                    .graphicsLayer { translationX = panelOffset }
                 .drawBackdrop(
                     backdrop = backdrop,
                     shape = { Capsule() },
@@ -600,10 +611,17 @@ fun LiquidBottomTabs(
         Box(
             Modifier
                 .padding(horizontal = 4.dp)
+                .offset {
+                    val x = if (isLtr) selectedTabIndex() * tabWidth
+                    else maxWidthPx - (selectedTabIndex() + 1f) * tabWidth
+                    androidx.compose.ui.unit.IntOffset(x.roundToInt(), 0)
+                }
                 .graphicsLayer {
-                    translationX =
-                        if (isLtr) dampedDragAnimation.value * tabWidth + panelOffset
-                        else size.width - (dampedDragAnimation.value + 1f) * tabWidth + panelOffset
+                    translationX = if (isLtr) {
+                        (dampedDragAnimation.value - selectedTabIndex()) * tabWidth + panelOffset
+                    } else {
+                        -(dampedDragAnimation.value - selectedTabIndex()) * tabWidth + panelOffset
+                    }
                 }
                 .then(interactiveHighlight.gestureModifier)
                 .then(dampedDragAnimation.modifier)
@@ -666,6 +684,7 @@ fun LiquidBottomTabs(
                 .height(height)
                 .fillMaxWidth(1f / tabsCount)
         )
+        }
     }
 }
 
@@ -1002,5 +1021,226 @@ fun LiquidToggle(
                 )
                 .size(if (isLiquidGlass) 40.dp else 24.dp, 24.dp)
         )
+    }
+}
+
+// LiquidSlider for 3 states (0, 1, 2)
+@Composable
+fun LiquidSlider(
+    value: () -> Int, // 0, 1, 2
+    onValueChange: (Int) -> Unit,
+    backdrop: Backdrop,
+    modifier: Modifier = Modifier
+) {
+    androidx.compose.foundation.layout.Column(modifier = modifier) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val isLightTheme = LocalIsLightTheme.current
+        val isLiquidGlass = LocalIsLiquidGlassEnabled.current
+        val trackColor = if (isLightTheme) Color(0xFF787878).copy(0.2f) else Color(0xFF787880).copy(0.36f)
+    
+        val density = LocalDensity.current
+        val isLtr = LocalLayoutDirection.current == LayoutDirection.Ltr
+        
+        val totalWidth = if (maxWidth != androidx.compose.ui.unit.Dp.Infinity) maxWidth else 120.dp
+        val knobWidth = if (isLiquidGlass) 40.dp else 24.dp
+        val dragWidthPx = with(density) { (totalWidth - 4.dp - knobWidth).toPx() }
+        
+        val animationScope = rememberCoroutineScope()
+        var didDrag by remember { mutableStateOf(false) }
+        var fraction by remember { mutableFloatStateOf(value().toFloat() / 2f) }
+        
+        val dampedDragAnimation = remember(animationScope, dragWidthPx) {
+            DampedDragAnimation(
+                animationScope = animationScope,
+                initialValue = fraction,
+                valueRange = 0f..1f,
+                visibilityThreshold = 0.001f,
+                initialScale = 1f,
+                pressedScale = 1.2f,
+                onDragStarted = {},
+                onDragStopped = {
+                    val targetValue = (this.targetValue * 2).roundToInt().coerceIn(0, 2)
+                    fraction = targetValue / 2f
+                    onValueChange(targetValue)
+                    didDrag = false
+                },
+                onDrag = { _, dragAmount ->
+                    if (!didDrag) {
+                        didDrag = dragAmount.x != 0f
+                    }
+                    val delta = dragAmount.x / dragWidthPx
+                    fraction =
+                        if (isLtr) (fraction + delta).coerceIn(0f, 1f)
+                        else (fraction - delta).coerceIn(0f, 1f)
+                }
+            )
+        }
+        
+        LaunchedEffect(dampedDragAnimation) {
+            snapshotFlow { fraction }
+                .collectLatest { fraction ->
+                    dampedDragAnimation.updateValue(fraction)
+                }
+        }
+        LaunchedEffect(value) {
+            snapshotFlow { value() }
+                .collectLatest { v ->
+                    val target = v.toFloat() / 2f
+                    if (target != fraction) {
+                        fraction = target
+                        dampedDragAnimation.animateToValue(target)
+                    }
+                }
+        }
+    
+        val trackBackdrop = rememberLayerBackdrop()
+    
+        Box(
+            Modifier.width(totalWidth).height(24.dp),
+            contentAlignment = Alignment.CenterStart
+        ) {
+            Box(
+                Modifier
+                    .height(4.dp)
+                    .layerBackdrop(trackBackdrop)
+                    .clip(Capsule())
+                    .drawBehind {
+                        val w = size.width
+                        val h = size.height
+                        
+                        val progress = dampedDragAnimation.value
+                        
+                        val dynamicColor = when {
+                            progress < 0.5f -> androidx.compose.ui.graphics.lerp(Color(0xFF0A84FF), Color(0xFFFF9500), progress * 2f)
+                            else -> androidx.compose.ui.graphics.lerp(Color(0xFFFF9500), Color(0xFF34C759), (progress - 0.5f) * 2f)
+                        }
+                        
+                        drawRect(trackColor)
+                        
+                        val knobPx = knobWidth.toPx()
+                        val startX = 2f.dp.toPx() + knobPx / 2f
+                        val endX = w - (2f.dp.toPx() + knobPx / 2f)
+                        val middleX = startX + (endX - startX) / 2f
+                        
+                        val knobCenter = startX + dragWidthPx * progress
+                        
+                        drawRect(
+                            color = dynamicColor,
+                            size = androidx.compose.ui.geometry.Size(knobCenter, h)
+                        )
+                        
+                        // Partitions
+                        val tickColor = Color.White.copy(alpha = 0.5f)
+                        val tickWidth = 2f.dp.toPx()
+                        drawRect(color = tickColor, topLeft = androidx.compose.ui.geometry.Offset(startX - tickWidth/2f, 0f), size = androidx.compose.ui.geometry.Size(tickWidth, h))
+                        drawRect(color = tickColor, topLeft = androidx.compose.ui.geometry.Offset(middleX - tickWidth/2f, 0f), size = androidx.compose.ui.geometry.Size(tickWidth, h))
+                        drawRect(color = tickColor, topLeft = androidx.compose.ui.geometry.Offset(endX - tickWidth/2f, 0f), size = androidx.compose.ui.geometry.Size(tickWidth, h))
+                    }
+                    .fillMaxWidth()
+            )
+
+        Box(
+            Modifier
+                .graphicsLayer {
+                    val progress = dampedDragAnimation.value
+                    val padding = 2f.dp.toPx()
+                    translationX =
+                        if (isLtr) lerp(padding, padding + dragWidthPx, progress)
+                        else lerp(-padding, -(padding + dragWidthPx), progress)
+                }
+                .semantics {
+                    // removed role = Role.Slider to fix Unresolved reference
+                }
+                .then(dampedDragAnimation.modifier)
+                .drawBackdrop(
+                    backdrop = if (isLiquidGlass) {
+                        rememberCombinedBackdrop(
+                            backdrop,
+                            rememberBackdrop(trackBackdrop) { drawBackdrop ->
+                                val progress = dampedDragAnimation.pressProgress
+                                val scaleX = lerp(2f / 3f, 0.75f, progress)
+                                val scaleY = lerp(0f, 0.75f, progress)
+                                scale(scaleX, scaleY) {
+                                    drawBackdrop()
+                                }
+                            }
+                        )
+                    } else {
+                        rememberCombinedBackdrop(backdrop, trackBackdrop)
+                    },
+                    shape = { Capsule() },
+                    effects = {
+                        val progress = dampedDragAnimation.pressProgress
+                        blur(8f.dp.toPx() * (1f - progress))
+                        if (isLiquidGlass) {
+                            lens(
+                                5f.dp.toPx() * progress,
+                                10f.dp.toPx() * progress,
+                                chromaticAberration = true
+                            )
+                        } else {
+                            lens(
+                                3f.dp.toPx(),
+                                5f.dp.toPx(),
+                                chromaticAberration = true
+                            )
+                        }
+                    },
+                    highlight = {
+                        val progress = dampedDragAnimation.pressProgress
+                        Highlight.Ambient.copy(
+                            width = Highlight.Ambient.width / 1.5f,
+                            blurRadius = Highlight.Ambient.blurRadius / 1.5f,
+                            alpha = progress
+                        )
+                    },
+                    shadow = {
+                        Shadow(
+                            radius = 4f.dp,
+                            color = Color.Black.copy(alpha = 0.05f)
+                        )
+                    },
+                    innerShadow = {
+                        val progress = dampedDragAnimation.pressProgress
+                        InnerShadow(
+                            radius = 4f.dp * progress,
+                            alpha = progress
+                        )
+                    },
+                    layerBlock = {
+                        if (isLiquidGlass) {
+                            scaleX = dampedDragAnimation.scaleX
+                            scaleY = dampedDragAnimation.scaleY
+                            val velocity = dampedDragAnimation.velocity / 50f
+                            scaleX /= 1f - (velocity * 0.75f).coerceIn(-0.2f, 0.2f)
+                            scaleY *= 1f - (velocity * 0.25f).coerceIn(-0.2f, 0.2f)
+                        } else {
+                            scaleX = 1f
+                            scaleY = 1f
+                        }
+                    },
+                    onDrawSurface = {
+                        val progress = dampedDragAnimation.pressProgress
+                        drawRect(Color.White.copy(alpha = 1f - progress))
+                    }
+                )
+                .border(
+                    width = 0.5.dp,
+                    color = if (isLightTheme) Color.Black.copy(alpha = 0.1f) else Color.White.copy(alpha = 0.3f),
+                    shape = Capsule()
+                )
+                .size(knobWidth, 24.dp)
+        )
+    }
+    }
+    
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.fillMaxWidth().padding(top = 10.dp, start = 4.dp, end = 4.dp),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            Text("Light", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.weight(1f).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onValueChange(0) }, textAlign = androidx.compose.ui.text.style.TextAlign.Start)
+            Text("Medium", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.weight(1f).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onValueChange(1) }, textAlign = androidx.compose.ui.text.style.TextAlign.Center)
+            Text("Ultra", fontSize = 12.sp, color = Color.Gray, modifier = Modifier.weight(1f).clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onValueChange(2) }, textAlign = androidx.compose.ui.text.style.TextAlign.End)
+        }
     }
 }

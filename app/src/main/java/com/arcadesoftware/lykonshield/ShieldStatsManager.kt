@@ -389,15 +389,20 @@ object ShieldStatsManager {
         }
     }
 
+    private val appNameCache = java.util.concurrent.ConcurrentHashMap<String, String>()
+
     private fun getAppName(context: Context, packageName: String): String {
         if (packageName == "system") return "System"
-        return try {
-            val pm = context.packageManager
-            @Suppress("DEPRECATION")
-            val info = pm.getApplicationInfo(packageName, 0)
-            pm.getApplicationLabel(info).toString()
-        } catch (_: Exception) {
-            packageName.substringAfterLast('.')
+        
+        return appNameCache.getOrPut(packageName) {
+            try {
+                val pm = context.packageManager
+                @Suppress("DEPRECATION")
+                val info = pm.getApplicationInfo(packageName, 0)
+                pm.getApplicationLabel(info).toString()
+            } catch (_: Exception) {
+                packageName.substringAfterLast('.')
+            }
         }
     }
 }
