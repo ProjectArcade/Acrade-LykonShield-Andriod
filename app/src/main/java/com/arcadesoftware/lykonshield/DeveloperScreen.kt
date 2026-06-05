@@ -72,14 +72,15 @@ fun DeveloperScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
                     )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(cardBg)
+                    GlassCard(
+                        backdrop = backdrop,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        SettingsRow(title = "AGSL Compilation", value = "Success", showDivider = true)
-                        SettingsRow(title = "Render Cache size", value = "512 MB", showDivider = false)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            SettingsRow(title = "AGSL Compilation", value = "Success", showDivider = true)
+                            SettingsRow(title = "Render Cache size", value = "512 MB", showDivider = false)
+                        }
                     }
                 }
             }
@@ -93,19 +94,20 @@ fun DeveloperScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
                     )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(cardBg)
+                    GlassCard(
+                        backdrop = backdrop,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        SettingsSwitchRow(
-                            title = "Network Hosts & Traffic Stream",
-                            checked = isAdvancedNetworkStatsEnabled,
-                            onCheckedChange = onAdvancedNetworkStatsToggle,
-                            backdrop = backdrop,
-                            showDivider = false
-                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            SettingsSwitchRow(
+                                title = "Network Hosts & Traffic Stream",
+                                checked = isAdvancedNetworkStatsEnabled,
+                                onCheckedChange = onAdvancedNetworkStatsToggle,
+                                backdrop = backdrop,
+                                showDivider = false
+                            )
+                        }
                     }
                 }
             }
@@ -119,14 +121,15 @@ fun DeveloperScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
                     )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(cardBg)
+                    GlassCard(
+                        backdrop = backdrop,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        SettingsRow(title = "Highlight Captures", value = "Off", showDivider = true)
-                        SettingsRow(title = "Force System Blur", value = "Enabled", showDivider = false)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            SettingsRow(title = "Highlight Captures", value = "Off", showDivider = true)
+                            SettingsRow(title = "Force System Blur", value = "Enabled", showDivider = false)
+                        }
                     }
                 }
             }

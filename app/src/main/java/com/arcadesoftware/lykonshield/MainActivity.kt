@@ -227,6 +227,7 @@ class MainActivity : ComponentActivity() {
                 val navBarPadding = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
 
                 val showBars = currentRoute in listOf("home", "blocked", "settings")
+                val dialogBackdrop = rememberLayerBackdrop()
 
                 Box(
                     modifier = Modifier
@@ -290,7 +291,7 @@ class MainActivity : ComponentActivity() {
                                     onAdvancedNetworkStatsToggle = { isAdvancedNetworkStatsEnabled = it },
                                     topPadding = 16.dp + statusBarPadding,
                                     bottomPadding = 16.dp + navBarPadding,
-                                    backdrop = backdrop
+                                    backdrop = backgroundBackdrop
                                 )
                             }
                             composable("exclude_apps") {
@@ -300,15 +301,15 @@ class MainActivity : ComponentActivity() {
                                     onToggleApp = { pkg ->
                                         excludedApps = if (excludedApps.contains(pkg)) {
                                             excludedApps - pkg
-                                        } else {
+                                         } else {
                                             excludedApps + pkg
-                                        }
-                                    },
-                                    topPadding = 16.dp + statusBarPadding,
-                                    bottomPadding = 16.dp + navBarPadding,
-                                    backdrop = backdrop
-                                )
-                            }
+                                         }
+                                     },
+                                     topPadding = 16.dp + statusBarPadding,
+                                     bottomPadding = 16.dp + navBarPadding,
+                                     backdrop = backgroundBackdrop
+                                 )
+                             }
                         }
                     }
 
@@ -390,7 +391,6 @@ class MainActivity : ComponentActivity() {
                         androidx.activity.compose.BackHandler {
                             showThemeDialog = false
                         }
-                        val dialogBackdrop = rememberLayerBackdrop()
                         Box(
                             modifier = Modifier.fillMaxSize(),
                             contentAlignment = Alignment.Center

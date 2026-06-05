@@ -111,7 +111,7 @@ private val SFXmarkCircleIcon: ImageVector
     }.build()
 
 @Composable
-private fun SkeletonShimmerItem(isLightTheme: Boolean) {
+private fun SkeletonShimmerItem(isLightTheme: Boolean, backdrop: Backdrop) {
     val shimmerColors = if (isLightTheme) {
         listOf(Color(0xFFE0E0E0), Color(0xFFF5F5F5), Color(0xFFE0E0E0))
     } else {
@@ -135,17 +135,15 @@ private fun SkeletonShimmerItem(isLightTheme: Boolean) {
         end = Offset(translateAnim + 300f, 0f)
     )
 
-    val cardBg = if (isLightTheme) Color.White else Color(0xFF1C1C1E)
-
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(cardBg)
-            .padding(12.dp)
+    GlassCard(
+        backdrop = backdrop,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -316,7 +314,7 @@ fun ExcludeAppsScreen(
 
                 if (isLoading) {
                     items(8) {
-                        SkeletonShimmerItem(isLightTheme = isLightTheme)
+                        SkeletonShimmerItem(isLightTheme = isLightTheme, backdrop = backdrop)
                     }
                 } else if (finalApps.isEmpty()) {
                     item {
@@ -336,15 +334,15 @@ fun ExcludeAppsScreen(
                 } else {
                     items(finalApps) { app ->
                         val isBypassed = excludedApps.contains(app.second)
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(16.dp))
-                                .background(cardBg)
-                                .padding(12.dp)
+                        GlassCard(
+                            backdrop = backdrop,
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp)
                         ) {
                             Row(
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(12.dp),
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
@@ -408,7 +406,7 @@ fun ExcludeAppsScreen(
                                 LiquidToggle(
                                     selected = { isBypassed },
                                     onSelect = { onToggleApp(app.second) },
-                                    backdrop = localBackdrop
+                                    backdrop = backdrop
                                 )
                             }
                         }

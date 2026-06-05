@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -74,7 +75,7 @@ fun SettingsScreen(
                 )
             }
 
-            item { ProfileCard() }
+            item { ProfileCard(backdrop) }
 
             item {
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -85,32 +86,33 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
                     )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(cardBg)
+                    GlassCard(
+                        backdrop = backdrop,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        val currentThemeText = when (themeMode) {
-                            1 -> "Light Theme"
-                            2 -> "Dark Theme"
-                            else -> "Match System Theme"
-                        }
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onThemeClick() }
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(text = "Theme Preference", color = contentColor, fontSize = 16.sp)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            val currentThemeText = when (themeMode) {
+                                1 -> "Light Theme"
+                                2 -> "Dark Theme"
+                                else -> "Match System Theme"
+                            }
                             Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onThemeClick() }
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(text = currentThemeText, color = Color.Gray, fontSize = 16.sp)
-                                Text(text = "〉", color = Color.Gray, fontSize = 14.sp)
+                                Text(text = "Theme Preference", color = contentColor, fontSize = 16.sp)
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(text = currentThemeText, color = Color.Gray, fontSize = 16.sp)
+                                    Text(text = "〉", color = Color.Gray, fontSize = 14.sp)
+                                }
                             }
                         }
                     }
@@ -126,32 +128,34 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
                     )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(cardBg)
+                    GlassCard(
+                        backdrop = backdrop,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        SettingsRow(title = "Custom Shaders", value = "AGSL Active", showDivider = true)
-                        SettingsRow(title = "Backdrop Blur Radius", value = "24dp", showDivider = true)
-                        SettingsSwitchRow(
-                            title = "Liquid Glass",
-                            checked = isLiquidGlassEnabled,
-                            onCheckedChange = onLiquidGlassToggle,
-                            backdrop = backdrop,
-                            showDivider = false
-                        )
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            SettingsRow(title = "Custom Shaders", value = "AGSL Active", showDivider = true)
+                            SettingsRow(title = "Backdrop Blur Radius", value = "24dp", showDivider = true)
+                            SettingsSwitchRow(
+                                title = "Liquid Glass",
+                                checked = isLiquidGlassEnabled,
+                                onCheckedChange = onLiquidGlassToggle,
+                                backdrop = backdrop,
+                                showDivider = false
+                            )
+                        }
                     }
                 }
             }
 
             item {
-                Column(
+                GlassCard(
+                    backdrop = backdrop,
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(16.dp))
-                        .background(cardBg)
-                        .clickable { onExcludeAppsClick() }
+                        .clickable { onExcludeAppsClick() },
+                    shape = RoundedCornerShape(16.dp)
                 ) {
                     Row(
                         modifier = Modifier
@@ -187,14 +191,15 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
                     )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(cardBg)
+                    GlassCard(
+                        backdrop = backdrop,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        SettingsRow(title = "App Version", value = BuildConfig.VERSION_NAME, showDivider = true)
-                        SettingsRow(title = "Developer", value = "Arcade Software", showDivider = false)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            SettingsRow(title = "App Version", value = BuildConfig.VERSION_NAME, showDivider = true)
+                            SettingsRow(title = "Developer", value = "Arcade Software", showDivider = false)
+                        }
                     }
                 }
             }
@@ -208,22 +213,24 @@ fun SettingsScreen(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(start = 8.dp)
                     )
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(RoundedCornerShape(16.dp))
-                            .background(cardBg)
+                    GlassCard(
+                        backdrop = backdrop,
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
                     ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onDeveloperClick() }
-                                .padding(16.dp),
-                            horizontalArrangement = Arrangement.SpaceBetween,
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(text = "Developer Options", color = contentColor, fontSize = 16.sp)
-                            Text(text = "〉", color = Color.Gray, fontSize = 14.sp)
+                        Column(modifier = Modifier.fillMaxWidth()) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .clickable { onDeveloperClick() }
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = "Developer Options", color = contentColor, fontSize = 16.sp)
+                                Text(text = "〉", color = Color.Gray, fontSize = 14.sp)
+                            }
                         }
                     }
                 }
@@ -241,90 +248,126 @@ fun IosThemeDialog(
 ) {
     val isLightTheme = LocalIsLightTheme.current
     val textColor = if (isLightTheme) Color.Black else Color.White
+    val systemBlue = if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)
 
     GlassCard(
         backdrop = backdrop,
-        modifier = Modifier.width(270.dp),
-        shape = RoundedCornerShape(14.dp)
+        modifier = Modifier.width(320.dp),
+        shape = RoundedCornerShape(28.dp)
     ) {
         Column(
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            Spacer(modifier = Modifier.height(20.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp), modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Appearance",
+                        color = textColor,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "Choose theme preference",
+                        color = Color.Gray,
+                        fontSize = 11.sp
+                    )
+                }
 
-            Text(
-                text = "Appearance",
-                fontWeight = FontWeight.Bold,
-                fontSize = 17.sp,
-                color = textColor,
-                modifier = Modifier.align(Alignment.CenterHorizontally)
-            )
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(if (isLightTheme) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.1f))
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "✕",
+                        color = textColor.copy(alpha = 0.6f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
 
-            Spacer(modifier = Modifier.height(4.dp))
-
-            Text(
-                text = "Choose how Lykon Shield looks on your device",
-                fontSize = 13.sp,
-                color = textColor.copy(alpha = 0.6f),
-                textAlign = TextAlign.Center,
+            Box(
                 modifier = Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .padding(horizontal = 20.dp)
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(if (isLightTheme) Color.Black.copy(0.08f) else Color.White.copy(0.1f))
             )
-
-            Spacer(modifier = Modifier.height(16.dp))
 
             val options = listOf("Match System Theme", "Light Theme", "Dark Theme")
-
-            options.forEachIndexed { index, title ->
-                HorizontalDivider(
-                    color = if (isLightTheme)
-                        Color.Black.copy(alpha = 0.15f)
-                    else
-                        Color.White.copy(alpha = 0.15f)
-                )
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable {
-                            onThemeSelect(index)
-                            onDismiss()
-                        }
-                        .padding(horizontal = 16.dp, vertical = 14.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(text = title, fontSize = 17.sp, color = textColor)
-                    if (currentTheme == index) {
-                        Text(
-                            text = "✓",
-                            color = Color(0xFF0A84FF),
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 18.sp
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(0.dp)
+            ) {
+                options.forEachIndexed { index, title ->
+                    if (index > 0) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(0.5.dp)
+                                .background(if (isLightTheme) Color.Black.copy(0.06f) else Color.White.copy(0.08f))
                         )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onThemeSelect(index)
+                                onDismiss()
+                            }
+                            .padding(vertical = 12.dp, horizontal = 4.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = title,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = textColor
+                        )
+                        if (currentTheme == index) {
+                            Text(
+                                text = "✓",
+                                color = systemBlue,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp
+                            )
+                        }
                     }
                 }
             }
 
-            HorizontalDivider(
-                color = if (isLightTheme)
-                    Color.Black.copy(alpha = 0.15f)
-                else
-                    Color.White.copy(alpha = 0.15f)
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(if (isLightTheme) Color.Black.copy(0.08f) else Color.White.copy(0.1f))
             )
 
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable(onClick = onDismiss)
-                    .padding(vertical = 14.dp),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(systemBlue)
+                    .clickable { onDismiss() }
+                    .padding(vertical = 11.dp),
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Cancel",
-                    color = Color.Red,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 17.sp
+                    text = "Done",
+                    color = Color.White,
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold
                 )
             }
         }
@@ -332,21 +375,19 @@ fun IosThemeDialog(
 }
 
 @Composable
-fun ProfileCard() {
+fun ProfileCard(backdrop: Backdrop) {
     val isLightTheme = LocalIsLightTheme.current
     val textColor = if (isLightTheme) Color.Black else Color.White
-    val cardBg = if (isLightTheme) Color.White else Color(0xFF1C1C1E)
 
     val iconResId = if (isLightTheme) R.drawable.ligh_icon else R.drawable.dark_icon
 
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
-            .background(cardBg)
-            .padding(16.dp)
+    GlassCard(
+        backdrop = backdrop,
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp)
     ) {
         Row(
+            modifier = Modifier.padding(16.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
