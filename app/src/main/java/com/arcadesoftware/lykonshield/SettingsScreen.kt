@@ -38,6 +38,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidToggle
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
 
 @Composable
 fun SettingsScreen(
@@ -55,13 +58,16 @@ fun SettingsScreen(
     val contentColor = if (isLightTheme) Color.Black else Color.White
     val cardBg = if (isLightTheme) Color.White else Color(0xFF1C1C1E)
     var showDeveloperDetails by remember { mutableStateOf(false) }
+    val dialogBackdrop = rememberLayerBackdrop()
 
     Box(modifier = Modifier.fillMaxSize()) {
 
         // List — no layerBackdrop wrapper, avoids layer conflict with dialog
         LazyColumn(
             state = state,
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .layerBackdrop(dialogBackdrop),
             contentPadding = PaddingValues(
                 top = topPadding,
                 bottom = bottomPadding + 16.dp,
@@ -247,15 +253,23 @@ fun SettingsScreen(
 
         if (showDeveloperDetails) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f))
-                    .clickable { showDeveloperDetails = false },
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(dialogBackdrop)
+                        .background(Color.Black.copy(alpha = if (isLightTheme) 0.08f else 0.3f))
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null,
+                            onClick = { showDeveloperDetails = false }
+                        )
+                )
                 IosDeveloperDetailsDialog(
                     onDismiss = { showDeveloperDetails = false },
-                    backdrop = backdrop
+                    backdrop = rememberCombinedBackdrop(backdrop, dialogBackdrop)
                 )
             }
         }

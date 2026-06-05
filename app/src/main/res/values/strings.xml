@@ -45,4 +45,16 @@
         <item>You can support the project by contributing code, reporting bugs on our official repository, or sharing Lykon Shield with your family and friends.</item>
         <item>No. Lykon Shield functions purely as a DNS resolver/blocker. It only filters domain name requests (like ads.example.com) and does not decrypt or inspect your actual network traffic content.</item>
     </string-array>
+
+    <string-array name="floating_emojis">
+        <item>️🥰</item>
+        <item>💖</item>
+        <item>🔥</item>
+        <item>🤩</item>
+        <item>🎉</item>
+        <item>💪</item>
+        <item>😍</item>
+        <item>🙌</item>
+        <item>💯</item>
+    </string-array>
 </resources>

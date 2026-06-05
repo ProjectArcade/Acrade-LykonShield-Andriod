@@ -20,6 +20,8 @@ import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.vibrancy
@@ -46,7 +48,9 @@ fun DeveloperScreen(
     backdrop: Backdrop
 ) {
     val screenContentBackdrop = rememberLayerBackdrop()
+    val dialogBackdrop = rememberLayerBackdrop()
     val isLightTheme = LocalIsLightTheme.current
+    val blurRadius = LocalBackdropBlurRadius.current
     val contentColor = if (isLightTheme) Color.Black else Color.White
     var showBlurDialog by remember { mutableStateOf(false) }
     var showCacheDialog by remember { mutableStateOf(false) }
@@ -60,6 +64,7 @@ fun DeveloperScreen(
         Box(
             modifier = Modifier
                 .layerBackdrop(screenContentBackdrop)
+                .layerBackdrop(dialogBackdrop)
                 .fillMaxSize()
         ) {
             LazyColumn(
@@ -257,7 +262,9 @@ fun DeveloperScreen(
                     shape = { RectangleShape },
                     effects = {
                         vibrancy()
-                        blur(20f.dp.toPx())
+                        if (blurRadius > 0f) {
+                            blur(blurRadius.dp.toPx())
+                        }
                     },
                     onDrawSurface = {
                         drawRect(if (isLightTheme) Color(0xFFFAFAFA).copy(0.4f) else Color(0xFF121212).copy(0.4f))
@@ -285,17 +292,25 @@ fun DeveloperScreen(
         // ios-style modal blur radius dialog
         if (showBlurDialog) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(0.4f))
-                    .clickable { showBlurDialog = false },
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(dialogBackdrop)
+                        .background(Color.Black.copy(alpha = if (isLightTheme) 0.08f else 0.3f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { showBlurDialog = false }
+                        )
+                )
                 IosBlurRadiusDialog(
                     currentRadius = backdropBlurRadius,
                     onRadiusSelect = onBackdropBlurRadiusChange,
                     onDismiss = { showBlurDialog = false },
-                    backdrop = backdrop
+                    backdrop = rememberCombinedBackdrop(backdrop, dialogBackdrop)
                 )
             }
         }
@@ -303,17 +318,25 @@ fun DeveloperScreen(
         // ios-style modal render cache size dialog
         if (showCacheDialog) {
             Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(Color.Black.copy(0.4f))
-                    .clickable { showCacheDialog = false },
+                modifier = Modifier.fillMaxSize(),
                 contentAlignment = Alignment.Center
             ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .layerBackdrop(dialogBackdrop)
+                        .background(Color.Black.copy(alpha = if (isLightTheme) 0.08f else 0.3f))
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = { showCacheDialog = false }
+                        )
+                )
                 IosCacheSizeDialog(
                     currentSize = renderCacheSize,
                     onSizeSelect = onRenderCacheSizeChange,
                     onDismiss = { showCacheDialog = false },
-                    backdrop = backdrop
+                    backdrop = rememberCombinedBackdrop(backdrop, dialogBackdrop)
                 )
             }
         }
@@ -476,7 +499,7 @@ fun IosCacheSizeDialog(
     GlassCard(
         backdrop = backdrop,
         modifier = Modifier.width(320.dp),
-        shape = RoundedCornerShape(28.dp)
+        shape = RoundedCornerShape(16.dp)
     ) {
         Column(
             modifier = Modifier

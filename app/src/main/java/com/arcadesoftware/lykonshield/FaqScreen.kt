@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -136,6 +137,7 @@ fun FaqScreen(
     val isLightTheme = LocalIsLightTheme.current
     val contentColor = if (isLightTheme) Color.Black else Color.White
     val screenContentBackdrop = rememberLayerBackdrop()
+    val blurRadius = LocalBackdropBlurRadius.current
 
     val context = LocalContext.current
     val questions = remember { context.resources.getStringArray(R.array.faq_questions) }
@@ -251,37 +253,51 @@ fun FaqScreen(
             }
         }
 
-        // ─── Expanded search bar (bottom) — iOS 17 spring animation ─────────────
-        AnimatedVisibility(
-            visible = isSearchExpanded,
-            enter = slideInVertically(
-                initialOffsetY = { it },
-                animationSpec = spring(dampingRatio = 0.72f, stiffness = 350f)
-            ) + fadeIn(animationSpec = tween(200)),
-            exit = slideOutVertically(
-                targetOffsetY = { it },
-                animationSpec = spring(dampingRatio = 0.85f, stiffness = 500f)
-            ) + fadeOut(animationSpec = tween(150)),
+        // ─── Morphing search bar (bottom) — iOS 17 Liquid Split / Morph animation ───
+        val density = LocalDensity.current
+        BoxWithConstraints(
             modifier = Modifier
-                .align(Alignment.BottomCenter)
+                .fillMaxWidth()
+                .align(Alignment.BottomStart)
                 .imePadding()
-                .padding(horizontal = 16.dp)
                 .padding(bottom = bottomPadding + 16.dp)
         ) {
-            LaunchedEffect(Unit) {
-                focusRequester.requestFocus()
-            }
+            val maxW = maxWidth
+            val searchWidth by animateDpAsState(
+                targetValue = if (isSearchExpanded) (maxW - 32.dp) else 48.dp,
+                animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
+                label = "searchWidth"
+            )
+            val searchX by animateDpAsState(
+                targetValue = if (isSearchExpanded) 16.dp else (maxW - 20.dp - 48.dp),
+                animationSpec = spring(dampingRatio = 0.7f, stiffness = 300f),
+                label = "searchX"
+            )
+
+            // Calculate expansion progress [0..1]
+            val collapsedWidth = 48.dp
+            val expandedWidth = maxW - 32.dp
+            val progress = if (expandedWidth > collapsedWidth) {
+                ((searchWidth - collapsedWidth) / (expandedWidth - collapsedWidth)).coerceIn(0f, 1f)
+            } else 0f
 
             Box(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .offset(x = searchX)
+                    .width(searchWidth)
+                    .height(48.dp)
                     .drawBackdrop(
                         backdrop = screenContentBackdrop,
                         shape = { CircleShape },
                         effects = {
                             vibrancy()
-                            blur(20f.dp.toPx())
-                            lens(12f.dp.toPx(), 16f.dp.toPx())
+                            if (blurRadius > 0f) {
+                                blur(blurRadius.dp.toPx())
+                            }
+                            // Liquid-like lens effect that increases during morph
+                            val lensRadiusVal = 12f.dp.toPx() + (8f.dp.toPx() * (1f - progress))
+                            val lensOffsetVal = 16f.dp.toPx() + (12f.dp.toPx() * (1f - progress))
+                            lens(lensRadiusVal, lensOffsetVal)
                         },
                         onDrawSurface = {
                             drawRect(
@@ -290,97 +306,94 @@ fun FaqScreen(
                             )
                         }
                     )
-                    .height(48.dp)
-                    .padding(horizontal = 16.dp)
+                    .clickable(
+                        enabled = !isSearchExpanded,
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null,
+                        onClick = { isSearchExpanded = true }
+                    )
             ) {
-                Row(
-                    modifier = Modifier.fillMaxSize(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Icon(
-                        imageVector = SFSearchIcon,
-                        contentDescription = "Search",
-                        tint = Color.Gray,
-                        modifier = Modifier.size(20.dp)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    androidx.compose.foundation.text.BasicTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
+                if (progress > 0.6f) {
+                    Row(
                         modifier = Modifier
-                            .weight(1f)
-                            .focusRequester(focusRequester),
-                        textStyle = androidx.compose.ui.text.TextStyle(
-                            color = contentColor,
-                            fontSize = 16.sp
-                        ),
-                        singleLine = true,
-                        cursorBrush = androidx.compose.ui.graphics.SolidColor(if (isLightTheme) Color.Black else Color.White),
-                        decorationBox = { innerTextField ->
-                            Box(contentAlignment = Alignment.CenterStart) {
-                                if (searchQuery.isEmpty()) {
-                                    Text(
-                                        text = "Search FAQ...",
-                                        color = Color.Gray,
-                                        fontSize = 16.sp
-                                    )
-                                }
-                                innerTextField()
-                            }
-                        }
-                    )
-                    if (searchQuery.isNotEmpty()) {
-                        Spacer(modifier = Modifier.width(8.dp))
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Icon(
-                            imageVector = SFXmarkCircleIcon,
-                            contentDescription = "Clear",
+                            imageVector = SFSearchIcon,
+                            contentDescription = "Search",
                             tint = Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        androidx.compose.foundation.text.BasicTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
                             modifier = Modifier
-                                .size(20.dp)
-                                .clickable { searchQuery = "" }
+                                .weight(1f)
+                                .focusRequester(focusRequester),
+                            textStyle = androidx.compose.ui.text.TextStyle(
+                                color = contentColor,
+                                fontSize = 16.sp
+                            ),
+                            singleLine = true,
+                            cursorBrush = androidx.compose.ui.graphics.SolidColor(if (isLightTheme) Color.Black else Color.White),
+                            decorationBox = { innerTextField ->
+                                Box(contentAlignment = Alignment.CenterStart) {
+                                    if (searchQuery.isEmpty()) {
+                                        Text(
+                                            text = "Search FAQ...",
+                                            color = Color.Gray,
+                                            fontSize = 16.sp
+                                        )
+                                    }
+                                    innerTextField()
+                                }
+                            }
+                        )
+                        if (searchQuery.isNotEmpty()) {
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Icon(
+                                imageVector = SFXmarkCircleIcon,
+                                contentDescription = "Clear",
+                                tint = Color.Gray,
+                                modifier = Modifier
+                                    .size(20.dp)
+                                    .clickable { searchQuery = "" }
+                            )
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Text(
+                            text = "Cancel",
+                            color = if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF),
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.clickable {
+                                searchQuery = ""
+                                isSearchExpanded = false
+                            }
                         )
                     }
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Text(
-                        text = "Cancel",
-                        color = if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF),
-                        fontSize = 16.sp,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.clickable {
-                            searchQuery = ""
-                            isSearchExpanded = false
-                        }
-                    )
+                } else {
+                    Box(
+                        modifier = Modifier.fillMaxSize(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = SFSearchIcon,
+                            contentDescription = "Search",
+                            tint = contentColor,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
                 }
             }
         }
 
-        // ─── FAB search button (bottom-right) — same style as back button ───────
-        AnimatedVisibility(
-            visible = !isSearchExpanded,
-            enter = scaleIn(
-                animationSpec = spring(dampingRatio = 0.6f, stiffness = 400f)
-            ) + fadeIn(tween(200)),
-            exit = scaleOut(
-                animationSpec = spring(dampingRatio = 0.8f, stiffness = 500f)
-            ) + fadeOut(tween(150)),
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 20.dp, bottom = bottomPadding + 20.dp)
-        ) {
-            LiquidButton(
-                onClick = { isSearchExpanded = true },
-                backdrop = screenContentBackdrop,
-                modifier = Modifier.size(48.dp),
-                shape = { CircleShape },
-                surfaceColor = Color.Transparent
-            ) {
-                Icon(
-                    imageVector = SFSearchIcon,
-                    contentDescription = "Search",
-                    tint = contentColor,
-                    modifier = Modifier.size(22.dp)
-                )
+        LaunchedEffect(isSearchExpanded) {
+            if (isSearchExpanded) {
+                focusRequester.requestFocus()
             }
         }
     }

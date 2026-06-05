@@ -59,6 +59,11 @@ import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import com.kyant.shapes.Capsule
 import com.kyant.backdrop.catalog.components.LiquidToggle
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.runtime.mutableStateListOf
+import kotlin.math.sin
 import android.graphics.BlurMaskFilter
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -291,12 +296,13 @@ fun HomeScreen(
         }
     }
 
-    LazyColumn(
-        state = state,
-        modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding + 16.dp, start = 16.dp, end = 16.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
-    ) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        LazyColumn(
+            state = state,
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(top = topPadding, bottom = bottomPadding + 16.dp, start = 16.dp, end = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
         item {
             Text(
                 text = "Home",
@@ -379,6 +385,10 @@ fun HomeScreen(
             }
         }
     }
+    FloatingEmojiSystem(
+        isEnhanced = (isProtectionEnabled && protectionLevel == ProtectionLevel.ENHANCED)
+    )
+}
 }
 
 enum class ProtectionLevel {
@@ -733,15 +743,6 @@ fun IosProtectionSlider(
                 Modifier
                     .clip(Capsule())
                     .background(trackColor)
-                    .pointerInput(animationScope) {
-                        detectTapGestures { position ->
-                            val delta = (valueRange.endInclusive - valueRange.start) * (position.x / trackWidth)
-                            val tapValue = (if (isLtr) valueRange.start + delta else valueRange.endInclusive - delta).coerceIn(valueRange)
-                            val snapped = tapValue.roundToInt().coerceIn(0, totalLevels - 1)
-                            dampedDragAnimation.animateToValue(snapped.toFloat())
-                            onLevelChange(snapped)
-                        }
-                    }
                     .height(6.dp)
                     .fillMaxWidth()
             )
@@ -892,23 +893,32 @@ fun ProtectionLevelCard(
                 ) {
                     listOf(0 to "Basic", 1 to "Standard", 2 to "Enhanced").forEach { (idx, label) ->
                         val isSelected = levelIndex == idx
+                        val isEnhancedSelected = isSelected && idx == 2
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(
-                                    if (isSelected) sliderColor.copy(alpha = if (isLightTheme) 0.15f else 0.20f)
+                                    if (isEnhancedSelected) Color(0xFFFF2D55).copy(alpha = if (isLightTheme) 0.18f else 0.25f)
+                                    else if (isSelected) sliderColor.copy(alpha = if (isLightTheme) 0.15f else 0.20f)
                                     else Color.Transparent
                                 )
-                                .clickable { onLevelChange(levels[idx]) }
                                 .padding(horizontal = 12.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Text(
-                                text = label,
-                                fontSize = 11.sp,
-                                color = if (isSelected) sliderColor else Color.Gray,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
-                            )
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                if (isEnhancedSelected) {
+                                    Text(text = "❤️", fontSize = 11.sp)
+                                }
+                                Text(
+                                    text = label,
+                                    fontSize = 11.sp,
+                                    color = if (isEnhancedSelected) Color(0xFFFF2D55) else if (isSelected) sliderColor else Color.Gray,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
+                                )
+                            }
                         }
                     }
                 }
@@ -1025,5 +1035,127 @@ fun StatsRow(title: String, value: String, color: Color) {
             Text(text = title, color = textColor, fontSize = 16.sp)
         }
         Text(text = value, color = color, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+    }
+}
+
+data class FloatingEmoji(
+    val id: Long,
+    val text: String,
+    val startX: Float,
+    val duration: Int,
+    val scale: Float,
+    val startDelay: Long = 0L
+)
+
+@Composable
+fun FloatingEmojiSystem(
+    isEnhanced: Boolean
+) {
+    val context = LocalContext.current
+    val emojiArray = remember {
+        try {
+            context.resources.getStringArray(R.array.floating_emojis)
+        } catch (e: Exception) {
+            arrayOf("❤️", "💖", "🔥", "✨", "🎉", "👍", "😍")
+        }
+    }
+    val activeEmojis = remember { mutableStateListOf<FloatingEmoji>() }
+    var nextId by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+
+    var hasInitialized by remember { mutableStateOf(false) }
+
+    LaunchedEffect(isEnhanced) {
+        if (isEnhanced) {
+            if (hasInitialized) {
+                activeEmojis.clear()
+                // Spawn in bulk across entire screen width
+                val count = 40
+                for (i in 0 until count) {
+                    val emoji = emojiArray.random()
+                    val id = nextId++
+                    // Full screen width distribution (0f to 1f)
+                    val startX = Math.random().toFloat()
+                    // Randomize delay to stagger launch over the first 1-2 seconds
+                    val startDelay = (Math.random() * 1200).toLong()
+                    // Staggered durations between 3 to 4.5 seconds
+                    val duration = 2800 + (Math.random() * 1200).toInt()
+                    val scale = 0.6f + (Math.random().toFloat() * 0.8f)
+                    activeEmojis.add(FloatingEmoji(id, emoji, startX, duration, scale, startDelay))
+                }
+                // Keep them on screen for 5 seconds total, then clear
+                kotlinx.coroutines.delay(5000)
+                activeEmojis.clear()
+            } else {
+                hasInitialized = true
+            }
+        } else {
+            hasInitialized = true
+            activeEmojis.clear()
+        }
+    }
+
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        activeEmojis.forEach { emoji ->
+            androidx.compose.runtime.key(emoji.id) {
+                FloatingEmojiItem(
+                    emoji = emoji,
+                    onFinished = { activeEmojis.remove(emoji) }
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FloatingEmojiItem(
+    emoji: FloatingEmoji,
+    onFinished: () -> Unit
+) {
+    val animatableY = remember { Animatable(1f) }
+    var isStarted by remember { mutableStateOf(false) }
+
+    LaunchedEffect(Unit) {
+        if (emoji.startDelay > 0) {
+            kotlinx.coroutines.delay(emoji.startDelay)
+        }
+        isStarted = true
+        animatableY.animateTo(
+            targetValue = 0f,
+            animationSpec = tween(durationMillis = emoji.duration, easing = LinearEasing)
+        )
+        onFinished()
+    }
+
+    val density = LocalDensity.current
+    val yFraction = animatableY.value
+    val opacity = if (!isStarted) 0f else {
+        if (yFraction < 0.25f) yFraction / 0.25f else 1f
+    }
+
+    if (isStarted || animatableY.value == 1f) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val width = constraints.maxWidth.toFloat()
+            val height = constraints.maxHeight.toFloat()
+
+            val sway = with(density) { sin((1f - yFraction) * Math.PI.toFloat() * 2.5f) * 24.dp.toPx() }
+            val xPos = emoji.startX * width + sway
+            val yPos = yFraction * height
+
+            Text(
+                text = emoji.text,
+                fontSize = 28.sp,
+                modifier = Modifier
+                    .graphicsLayer {
+                        translationX = xPos
+                        translationY = yPos
+                        scaleX = emoji.scale
+                        scaleY = emoji.scale
+                        alpha = opacity
+                    }
+            )
+        }
     }
 }

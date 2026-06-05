@@ -174,6 +174,20 @@ class MainActivity : ComponentActivity() {
                 var isProtectionEnabled by remember { mutableStateOf(initialProtection) }
                 var excludedApps by remember { mutableStateOf(initialExcludedApps) }
 
+                // Load and save protection level state
+                val initialProtectionLevelName = remember { prefs.getString("protection_level", "TRACKER_AND_ADS") ?: "TRACKER_AND_ADS" }
+                val initialProtectionLevel = remember {
+                    try {
+                        ProtectionLevel.valueOf(initialProtectionLevelName)
+                    } catch (e: Exception) {
+                        ProtectionLevel.TRACKER_AND_ADS
+                    }
+                }
+                var protectionLevel by remember { mutableStateOf(initialProtectionLevel) }
+                LaunchedEffect(protectionLevel) {
+                    prefs.edit().putString("protection_level", protectionLevel.name).apply()
+                }
+
                 val context = androidx.compose.ui.platform.LocalContext.current
                 val vpnLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
@@ -269,6 +283,7 @@ class MainActivity : ComponentActivity() {
                     Box(
                         modifier = Modifier
                             .layerBackdrop(backdrop)
+                            .layerBackdrop(dialogBackdrop)
                             .fillMaxSize()
                     ) {
                         NavHost(
@@ -284,7 +299,9 @@ class MainActivity : ComponentActivity() {
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
                                     topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
-                                    backdrop = backgroundBackdrop
+                                    backdrop = backgroundBackdrop,
+                                    protectionLevel = protectionLevel,
+                                    onProtectionLevelChange = { protectionLevel = it }
                                 )
                             }
                             composable("blocked") {
