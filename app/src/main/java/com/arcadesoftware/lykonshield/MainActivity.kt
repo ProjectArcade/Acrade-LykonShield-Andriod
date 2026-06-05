@@ -69,18 +69,23 @@ class MainActivity : ComponentActivity() {
         setContent {
             val initialThemeMode = remember { prefs.getInt("theme_mode", 0) }
             val initialLiquidGlass = remember { prefs.getBoolean("liquid_glass_enabled", true) }
+            val initialAdvancedStats = remember { prefs.getBoolean("advanced_network_stats", false) }
             val initialProtection = remember { prefs.getBoolean("protection_enabled", false) }
             val initialExcludedApps = remember { prefs.getStringSet("excluded_apps", emptySet()) ?: emptySet() }
 
             var themeMode by remember { mutableIntStateOf(initialThemeMode) }
             var showThemeDialog by rememberSaveable { mutableStateOf(false) }
             var isLiquidGlassEnabled by remember { mutableStateOf(initialLiquidGlass) }
+            var isAdvancedNetworkStatsEnabled by remember { mutableStateOf(initialAdvancedStats) }
 
             LaunchedEffect(themeMode) {
                 prefs.edit().putInt("theme_mode", themeMode).apply()
             }
             LaunchedEffect(isLiquidGlassEnabled) {
                 prefs.edit().putBoolean("liquid_glass_enabled", isLiquidGlassEnabled).apply()
+            }
+            LaunchedEffect(isAdvancedNetworkStatsEnabled) {
+                prefs.edit().putBoolean("advanced_network_stats", isAdvancedNetworkStatsEnabled).apply()
             }
 
             val isDark = when (themeMode) {
@@ -258,6 +263,7 @@ class MainActivity : ComponentActivity() {
                                 BlockedScreen(
                                     state = blockedState,
                                     isProtectionEnabled = isProtectionEnabled,
+                                    isAdvancedNetworkStatsEnabled = isAdvancedNetworkStatsEnabled,
                                     topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
                                     backdrop = backgroundBackdrop
@@ -269,6 +275,7 @@ class MainActivity : ComponentActivity() {
                                     themeMode = themeMode,
                                     onThemeClick = { showThemeDialog = true },
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
+                                    onDeveloperClick = { navController.navigate("developer") },
                                     isLiquidGlassEnabled = isLiquidGlassEnabled,
                                     onLiquidGlassToggle = { isLiquidGlassEnabled = it },
                                     topPadding = 12.dp + statusBarPadding,
@@ -279,6 +286,8 @@ class MainActivity : ComponentActivity() {
                             composable("developer") {
                                 DeveloperScreen(
                                     navController = navController,
+                                    isAdvancedNetworkStatsEnabled = isAdvancedNetworkStatsEnabled,
+                                    onAdvancedNetworkStatsToggle = { isAdvancedNetworkStatsEnabled = it },
                                     topPadding = 16.dp + statusBarPadding,
                                     bottomPadding = 16.dp + navBarPadding,
                                     backdrop = backdrop

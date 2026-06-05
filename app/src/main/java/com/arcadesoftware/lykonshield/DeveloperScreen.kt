@@ -28,6 +28,8 @@ import com.kyant.backdrop.effects.vibrancy
 @Composable
 fun DeveloperScreen(
     navController: androidx.navigation.NavController,
+    isAdvancedNetworkStatsEnabled: Boolean,
+    onAdvancedNetworkStatsToggle: (Boolean) -> Unit,
     topPadding: androidx.compose.ui.unit.Dp,
     bottomPadding: androidx.compose.ui.unit.Dp,
     backdrop: Backdrop
@@ -78,6 +80,32 @@ fun DeveloperScreen(
                     ) {
                         SettingsRow(title = "AGSL Compilation", value = "Success", showDivider = true)
                         SettingsRow(title = "Render Cache size", value = "512 MB", showDivider = false)
+                    }
+                }
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "ADVANCED FEATURES",
+                        color = Color.Gray,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(cardBg)
+                    ) {
+                        SettingsSwitchRow(
+                            title = "Network Hosts & Traffic Stream",
+                            checked = isAdvancedNetworkStatsEnabled,
+                            onCheckedChange = onAdvancedNetworkStatsToggle,
+                            backdrop = backdrop,
+                            showDivider = false
+                        )
                     }
                 }
             }

@@ -39,6 +39,7 @@ fun SettingsScreen(
     themeMode: Int,
     onThemeClick: () -> Unit,
     onExcludeAppsClick: () -> Unit,
+    onDeveloperClick: () -> Unit,
     isLiquidGlassEnabled: Boolean,
     onLiquidGlassToggle: (Boolean) -> Unit,
     topPadding: androidx.compose.ui.unit.Dp,
@@ -194,6 +195,36 @@ fun SettingsScreen(
                     ) {
                         SettingsRow(title = "App Version", value = BuildConfig.VERSION_NAME, showDivider = true)
                         SettingsRow(title = "Developer", value = "Arcade Software", showDivider = false)
+                    }
+                }
+            }
+
+            item {
+                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Text(
+                        text = "DEVELOPER",
+                        color = Color.Gray,
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(start = 8.dp)
+                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(16.dp))
+                            .background(cardBg)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { onDeveloperClick() }
+                                .padding(16.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(text = "Developer Options", color = contentColor, fontSize = 16.sp)
+                            Text(text = "〉", color = Color.Gray, fontSize = 14.sp)
+                        }
                     }
                 }
             }
