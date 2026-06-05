@@ -72,11 +72,21 @@ class MainActivity : ComponentActivity() {
             val initialAdvancedStats = remember { prefs.getBoolean("advanced_network_stats", false) }
             val initialProtection = remember { prefs.getBoolean("protection_enabled", false) }
             val initialExcludedApps = remember { prefs.getStringSet("excluded_apps", emptySet()) ?: emptySet() }
+            val initialBackdropBlurRadius = remember { prefs.getFloat("backdrop_blur_radius", 24f) }
+            val initialCustomShaders = remember { prefs.getBoolean("custom_shaders_enabled", true) }
+            val initialHighlightCaptures = remember { prefs.getBoolean("highlight_captures_enabled", false) }
+            val initialForceSystemBlur = remember { prefs.getBoolean("force_system_blur_enabled", true) }
+            val initialRenderCacheSize = remember { prefs.getInt("render_cache_size", 512) }
 
             var themeMode by remember { mutableIntStateOf(initialThemeMode) }
             var showThemeDialog by rememberSaveable { mutableStateOf(false) }
             var isLiquidGlassEnabled by remember { mutableStateOf(initialLiquidGlass) }
             var isAdvancedNetworkStatsEnabled by remember { mutableStateOf(initialAdvancedStats) }
+            var backdropBlurRadius by remember { mutableStateOf(initialBackdropBlurRadius) }
+            var isCustomShadersEnabled by remember { mutableStateOf(initialCustomShaders) }
+            var isHighlightCapturesEnabled by remember { mutableStateOf(initialHighlightCaptures) }
+            var isForceSystemBlurEnabled by remember { mutableStateOf(initialForceSystemBlur) }
+            var renderCacheSize by remember { mutableStateOf(initialRenderCacheSize) }
 
             LaunchedEffect(themeMode) {
                 prefs.edit().putInt("theme_mode", themeMode).apply()
@@ -86,6 +96,21 @@ class MainActivity : ComponentActivity() {
             }
             LaunchedEffect(isAdvancedNetworkStatsEnabled) {
                 prefs.edit().putBoolean("advanced_network_stats", isAdvancedNetworkStatsEnabled).apply()
+            }
+            LaunchedEffect(backdropBlurRadius) {
+                prefs.edit().putFloat("backdrop_blur_radius", backdropBlurRadius).apply()
+            }
+            LaunchedEffect(isCustomShadersEnabled) {
+                prefs.edit().putBoolean("custom_shaders_enabled", isCustomShadersEnabled).apply()
+            }
+            LaunchedEffect(isHighlightCapturesEnabled) {
+                prefs.edit().putBoolean("highlight_captures_enabled", isHighlightCapturesEnabled).apply()
+            }
+            LaunchedEffect(isForceSystemBlurEnabled) {
+                prefs.edit().putBoolean("force_system_blur_enabled", isForceSystemBlurEnabled).apply()
+            }
+            LaunchedEffect(renderCacheSize) {
+                prefs.edit().putInt("render_cache_size", renderCacheSize).apply()
             }
 
             val isDark = when (themeMode) {
@@ -105,7 +130,9 @@ class MainActivity : ComponentActivity() {
                 val isLightTheme = !isDark
                 CompositionLocalProvider(
                     LocalIsLightTheme provides isLightTheme,
-                    LocalIsLiquidGlassEnabled provides isLiquidGlassEnabled
+                    LocalIsLiquidGlassEnabled provides isLiquidGlassEnabled,
+                    LocalBackdropBlurRadius provides backdropBlurRadius,
+                    LocalIsCustomShadersEnabled provides isCustomShadersEnabled
                 ) {
                     val backdrop = rememberLayerBackdrop {
                         drawRect(if (isLightTheme) Color(0xFFF2F2F7) else Color.Black)
@@ -277,8 +304,7 @@ class MainActivity : ComponentActivity() {
                                     onThemeClick = { showThemeDialog = true },
                                     onExcludeAppsClick = { navController.navigate("exclude_apps") },
                                     onDeveloperClick = { navController.navigate("developer") },
-                                    isLiquidGlassEnabled = isLiquidGlassEnabled,
-                                    onLiquidGlassToggle = { isLiquidGlassEnabled = it },
+                                    onFaqClick = { navController.navigate("faq") },
                                     topPadding = 12.dp + statusBarPadding,
                                     bottomPadding = 88.dp + navBarPadding,
                                     backdrop = backgroundBackdrop
@@ -289,6 +315,18 @@ class MainActivity : ComponentActivity() {
                                     navController = navController,
                                     isAdvancedNetworkStatsEnabled = isAdvancedNetworkStatsEnabled,
                                     onAdvancedNetworkStatsToggle = { isAdvancedNetworkStatsEnabled = it },
+                                    isLiquidGlassEnabled = isLiquidGlassEnabled,
+                                    onLiquidGlassToggle = { isLiquidGlassEnabled = it },
+                                    isCustomShadersEnabled = isCustomShadersEnabled,
+                                    onCustomShadersToggle = { isCustomShadersEnabled = it },
+                                    backdropBlurRadius = backdropBlurRadius,
+                                    onBackdropBlurRadiusChange = { backdropBlurRadius = it },
+                                    isHighlightCapturesEnabled = isHighlightCapturesEnabled,
+                                    onHighlightCapturesToggle = { isHighlightCapturesEnabled = it },
+                                    isForceSystemBlurEnabled = isForceSystemBlurEnabled,
+                                    onForceSystemBlurToggle = { isForceSystemBlurEnabled = it },
+                                    renderCacheSize = renderCacheSize,
+                                    onRenderCacheSizeChange = { renderCacheSize = it },
                                     topPadding = 16.dp + statusBarPadding,
                                     bottomPadding = 16.dp + navBarPadding,
                                     backdrop = backgroundBackdrop
@@ -310,6 +348,14 @@ class MainActivity : ComponentActivity() {
                                      backdrop = backgroundBackdrop
                                  )
                              }
+                            composable("faq") {
+                                FaqScreen(
+                                    navController = navController,
+                                    topPadding = 16.dp + statusBarPadding,
+                                    bottomPadding = 16.dp + navBarPadding,
+                                    backdrop = backgroundBackdrop
+                                )
+                            }
                         }
                     }
 

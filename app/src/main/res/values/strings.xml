@@ -1,4 +1,48 @@
 <resources>
     <string name="app_name">Lykon Shield</string>
     <string name="version">1.0.6</string>
+
+    <string-array name="faq_questions">
+        <item>What is Lykon Shield?</item>
+        <item>How does Ad Blocking work?</item>
+        <item>Will it consume more battery?</item>
+        <item>What are Bypass Apps?</item>
+        <item>Is my traffic routed through any external servers?</item>
+        <item>How do I customize block lists?</item>
+        <item>Why can I still see ads on YouTube?</item>
+        <item>My device is lagging! How do I fix that?</item>
+        <item>Does it block ads on OTT platforms as well?</item>
+        <item>Why am I still seeing ads on some apps?</item>
+        <item>Who owns this app?</item>
+        <item>Does this app collect my data or credentials?</item>
+        <item>If this app is free, how does the developer make money?</item>
+        <item>Is the developer an idiot?</item>
+        <item>Who created the Liquid Glass effects?</item>
+        <item>Why this app is not avaible at playstore</item>
+        <item>Is this project open-source?</item>
+        <item>How can I support the project?</item>
+        <item>Does Lykon Shield inspect my HTTPS traffic?</item>
+    </string-array>
+
+    <string-array name="faq_answers">
+        <item>Lykon Shield is a local VPN-based ad-blocker designed to block ads, tracking domains, and protect your privacy on Android devices.</item>
+        <item>It runs a local DNS server through Android\'s VPN API. It inspects DNS queries and sinks known advertisement and tracking domains locally.</item>
+        <item>No, because the VPN is completely local and does not route traffic to a remote server. The overhead is extremely low.</item>
+        <item>Bypass Apps are apps you select that will bypass the VPN entirely. Their traffic will go straight to the network without ad-blocking.</item>
+        <item>Absolutely not. All traffic stays entirely on your device. Lykon Shield does not have external trackers or cloud servers for analytics.</item>
+        <item>You can customize bypass settings and features under Developer Options or Shield System settings on the main screen.</item>
+        <item>YouTube serves ads from the same servers as actual video content, making it impossible to block them purely via DNS without blocking the videos themselves. We recommend using YouTube in a browser with ad-blocking extensions or using dedicated alternative clients.</item>
+        <item>If you experience device lag, go to Developer Options and disable \'Custom Shaders\' or set the \'Backdrop Blur Radius\' to Off. You can also exclude resource-heavy apps in the Bypass Apps configuration.</item>
+        <item>Lykon Shield blocks ad domains across most streaming and OTT applications. However, some providers stream ads directly from their primary media servers, which DNS blockers cannot filter without disrupting playback.</item>
+        <item>Some apps use encrypted DNS (DoH/DoT) to bypass local DNS settings, or fetch ads via static IP addresses. Clearing the target app\'s cache and restarting it under protection can help resolve this.</item>
+        <item>Lykon Shield is owned by the organization ProjectArcade/ and was developed by Abhinav Thakur. The project is open-source and dedicated to privacy-first community utility.</item>
+        <item>Absolutely not. Lykon Shield operates completely locally on your device. None of your DNS query logs, traffic data, credentials, or personal information ever leave your device.</item>
+        <item>Lykon Shield is built entirely out of passion and a belief in a privacy-first web. The developers earn nothing from this app directly; it is supported by volunteer contributions and open-source donation platforms.</item>
+        <item>Yes, absolutely. Who else spends weeks writing high-performance local VPN engines and complex AGSL liquid glass shaders just to give it away for free with zero ads or tracking? A financial genius would never.</item>
+        <item>The liquid glass effects are created by Kyant and are available at https://github.com/Kyant0/AndroidLiquidGlass/ under the Apache-2.0 license.</item>
+        <item>Developer has no money to publish it :(</item>
+        <item>Yes, Lykon Shield is fully open-source and hosted on GitHub under the GPL-3.0 license. The source code is owned by the organization ProjectArcade.</item>
+        <item>You can support the project by contributing code, reporting bugs on our official repository, or sharing Lykon Shield with your family and friends.</item>
+        <item>No. Lykon Shield functions purely as a DNS resolver/blocker. It only filters domain name requests (like ads.example.com) and does not decrypt or inspect your actual network traffic content.</item>
+    </string-array>
 </resources>

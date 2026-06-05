@@ -58,6 +58,7 @@ import androidx.compose.ui.util.fastCoerceIn
 import androidx.compose.ui.util.fastRoundToInt
 import androidx.compose.ui.util.lerp
 import com.kyant.shapes.Capsule
+import com.kyant.backdrop.catalog.components.LiquidToggle
 import android.graphics.BlurMaskFilter
 import androidx.compose.ui.graphics.drawscope.drawIntoCanvas
 import androidx.compose.ui.graphics.nativeCanvas
@@ -87,57 +88,92 @@ fun GlassCard(
     content: @Composable BoxScope.() -> Unit
 ) {
     val isLightTheme = LocalIsLightTheme.current
+    val isLiquidGlass = LocalIsLiquidGlassEnabled.current
+    val blurRadius = LocalBackdropBlurRadius.current
     val containerColor = if (isLightTheme) {
-        Color(0xFFFFFFFF).copy(alpha = 0.12f)
+        if (isLiquidGlass) Color(0xFFFFFFFF).copy(alpha = 0.12f) else Color.White
     } else {
-        Color(0xFF1E1E1E).copy(alpha = 0.16f)
+        if (isLiquidGlass) Color(0xFF1E1E1E).copy(alpha = 0.16f) else Color(0xFF1C1C1E)
     }
 
-    Box(
-        modifier = modifier
-            .drawBackdrop(
-                backdrop = backdrop,
-                shape = { shape },
-                effects = {
-                    vibrancy()
-                    blur(24f.dp.toPx())
-                },
-                highlight = {
-                    Highlight.Default.copy(
-                        alpha = if (isLightTheme) 0.35f else 0.15f
-                    )
-                },
-                shadow = {
-                    Shadow(
-                        color = Color.Black,
-                        radius = 12f.dp,
-                        alpha = if (isLightTheme) 0.03f else 0.1f
-                    )
-                },
-                onDrawSurface = {
-                    drawRect(containerColor)
-                    val strokeColor = if (isLightTheme) Color.White.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.12f)
-                    val outline = shape.createOutline(size, layoutDirection, density = this)
-                    val outlinePath = when (outline) {
-                        is androidx.compose.ui.graphics.Outline.Rectangle -> {
-                            Path().apply { addRect(outline.rect) }
+    if (isLiquidGlass) {
+        Box(
+            modifier = modifier
+                .drawBackdrop(
+                    backdrop = backdrop,
+                    shape = { shape },
+                    effects = {
+                        vibrancy()
+                        if (blurRadius > 0f) {
+                            blur(blurRadius.dp.toPx())
                         }
-                        is androidx.compose.ui.graphics.Outline.Rounded -> {
-                            Path().apply { addRoundRect(outline.roundRect) }
+                    },
+                    highlight = {
+                        Highlight.Default.copy(
+                            alpha = if (isLightTheme) 0.35f else 0.15f
+                        )
+                    },
+                    shadow = {
+                        Shadow(
+                            color = Color.Black,
+                            radius = 12f.dp,
+                            alpha = if (isLightTheme) 0.03f else 0.1f
+                        )
+                    },
+                    onDrawSurface = {
+                        drawRect(containerColor)
+                        val strokeColor = if (isLightTheme) Color.White.copy(alpha = 0.45f) else Color.White.copy(alpha = 0.12f)
+                        val outline = shape.createOutline(size, layoutDirection, density = this)
+                        val outlinePath = when (outline) {
+                            is androidx.compose.ui.graphics.Outline.Rectangle -> {
+                                Path().apply { addRect(outline.rect) }
+                            }
+                            is androidx.compose.ui.graphics.Outline.Rounded -> {
+                                Path().apply { addRoundRect(outline.roundRect) }
+                            }
+                            is androidx.compose.ui.graphics.Outline.Generic -> {
+                                outline.path
+                            }
                         }
-                        is androidx.compose.ui.graphics.Outline.Generic -> {
-                            outline.path
-                        }
+                        drawPath(
+                            path = outlinePath,
+                            color = strokeColor,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f.dp.toPx())
+                        )
                     }
-                    drawPath(
-                        path = outlinePath,
-                        color = strokeColor,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f.dp.toPx())
-                    )
-                }
-            ),
-        content = content
-    )
+                ),
+            content = content
+        )
+    } else {
+        Box(
+            modifier = modifier
+                .clip(shape)
+                .background(containerColor)
+                .then(
+                    Modifier.drawBehind {
+                        val strokeColor = if (isLightTheme) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.05f)
+                        val outline = shape.createOutline(size, layoutDirection, density = this)
+                        val outlinePath = when (outline) {
+                            is androidx.compose.ui.graphics.Outline.Rectangle -> {
+                                Path().apply { addRect(outline.rect) }
+                            }
+                            is androidx.compose.ui.graphics.Outline.Rounded -> {
+                                Path().apply { addRoundRect(outline.roundRect) }
+                            }
+                            is androidx.compose.ui.graphics.Outline.Generic -> {
+                                outline.path
+                            }
+                        }
+                        drawPath(
+                            path = outlinePath,
+                            color = strokeColor,
+                            style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1f.dp.toPx())
+                        )
+                    }
+                ),
+            content = content
+        )
+    }
 }
 
 @Composable
@@ -617,6 +653,7 @@ fun IosProtectionSlider(
     backdrop: Backdrop,
     onLevelChange: (Int) -> Unit
 ) {
+    val isLiquidGlass = LocalIsLiquidGlassEnabled.current
     val valueRange = 0f..(totalLevels - 1).toFloat()
 
     val levelColors = listOf(Color(0xFFF44336), Color(0xFFFF9500), Color(0xFF34C759))
@@ -742,33 +779,54 @@ fun IosProtectionSlider(
                     ),
                     shape = { Capsule() },
                     effects = {
-                        val progress = dampedDragAnimation.pressProgress
-                        blur(8f.dp.toPx() * (1f - progress))
-                        lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, chromaticAberration = true)
+                        if (isLiquidGlass) {
+                            val progress = dampedDragAnimation.pressProgress
+                            blur(8f.dp.toPx() * (1f - progress))
+                            lens(10f.dp.toPx() * progress, 14f.dp.toPx() * progress, chromaticAberration = true)
+                        }
                     },
                     highlight = {
-                        val progress = dampedDragAnimation.pressProgress
-                        Highlight.Ambient.copy(
-                            width = Highlight.Ambient.width / 1.5f,
-                            blurRadius = Highlight.Ambient.blurRadius / 1.5f,
-                            alpha = progress
-                        )
+                        if (isLiquidGlass) {
+                            val progress = dampedDragAnimation.pressProgress
+                            Highlight.Ambient.copy(
+                                width = Highlight.Ambient.width / 1.5f,
+                                blurRadius = Highlight.Ambient.blurRadius / 1.5f,
+                                alpha = progress
+                            )
+                        } else null
                     },
-                    shadow = { Shadow(radius = 4f.dp, color = Color.Black.copy(alpha = 0.05f)) },
+                    shadow = {
+                        if (isLiquidGlass) {
+                            Shadow(radius = 4f.dp, color = Color.Black.copy(alpha = 0.05f))
+                        } else {
+                            Shadow(radius = 4f.dp, color = Color.Black.copy(alpha = 0.2f))
+                        }
+                    },
                     innerShadow = {
-                        val progress = dampedDragAnimation.pressProgress
-                        InnerShadow(radius = 4f.dp * progress, alpha = progress)
+                        if (isLiquidGlass) {
+                            val progress = dampedDragAnimation.pressProgress
+                            InnerShadow(radius = 4f.dp * progress, alpha = progress)
+                        } else null
                     },
                     layerBlock = {
-                        scaleX = dampedDragAnimation.scaleX
-                        scaleY = dampedDragAnimation.scaleY
-                        val velocity = dampedDragAnimation.velocity / 10f
-                        scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
-                        scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                        if (isLiquidGlass) {
+                            scaleX = dampedDragAnimation.scaleX
+                            scaleY = dampedDragAnimation.scaleY
+                            val velocity = dampedDragAnimation.velocity / 10f
+                            scaleX /= 1f - (velocity * 0.75f).fastCoerceIn(-0.2f, 0.2f)
+                            scaleY *= 1f - (velocity * 0.25f).fastCoerceIn(-0.2f, 0.2f)
+                        } else {
+                            scaleX = 1f
+                            scaleY = 1f
+                        }
                     },
                     onDrawSurface = {
-                        val progress = dampedDragAnimation.pressProgress
-                        drawRect(Color.White.copy(alpha = 1f - progress))
+                        if (isLiquidGlass) {
+                            val progress = dampedDragAnimation.pressProgress
+                            drawRect(Color.White.copy(alpha = 1f - progress))
+                        } else {
+                            drawRect(Color.White)
+                        }
                     }
                 )
                 .size(40.dp, 24.dp)

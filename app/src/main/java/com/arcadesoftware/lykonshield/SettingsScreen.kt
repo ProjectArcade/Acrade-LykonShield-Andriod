@@ -22,6 +22,10 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -33,6 +37,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kyant.backdrop.Backdrop
+import com.kyant.backdrop.catalog.components.LiquidToggle
 
 @Composable
 fun SettingsScreen(
@@ -41,8 +46,7 @@ fun SettingsScreen(
     onThemeClick: () -> Unit,
     onExcludeAppsClick: () -> Unit,
     onDeveloperClick: () -> Unit,
-    isLiquidGlassEnabled: Boolean,
-    onLiquidGlassToggle: (Boolean) -> Unit,
+    onFaqClick: () -> Unit,
     topPadding: androidx.compose.ui.unit.Dp,
     bottomPadding: androidx.compose.ui.unit.Dp,
     backdrop: Backdrop
@@ -50,6 +54,7 @@ fun SettingsScreen(
     val isLightTheme = LocalIsLightTheme.current
     val contentColor = if (isLightTheme) Color.Black else Color.White
     val cardBg = if (isLightTheme) Color.White else Color(0xFF1C1C1E)
+    var showDeveloperDetails by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
 
@@ -120,35 +125,6 @@ fun SettingsScreen(
             }
 
             item {
-                Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Text(
-                        text = "SHIELD SYSTEM",
-                        color = Color.Gray,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(start = 8.dp)
-                    )
-                    GlassCard(
-                        backdrop = backdrop,
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Column(modifier = Modifier.fillMaxWidth()) {
-                            SettingsRow(title = "Custom Shaders", value = "AGSL Active", showDivider = true)
-                            SettingsRow(title = "Backdrop Blur Radius", value = "24dp", showDivider = true)
-                            SettingsSwitchRow(
-                                title = "Liquid Glass",
-                                checked = isLiquidGlassEnabled,
-                                onCheckedChange = onLiquidGlassToggle,
-                                backdrop = backdrop,
-                                showDivider = false
-                            )
-                        }
-                    }
-                }
-            }
-
-            item {
                 GlassCard(
                     backdrop = backdrop,
                     modifier = Modifier
@@ -198,7 +174,39 @@ fun SettingsScreen(
                     ) {
                         Column(modifier = Modifier.fillMaxWidth()) {
                             SettingsRow(title = "App Version", value = BuildConfig.VERSION_NAME, showDivider = true)
-                            SettingsRow(title = "Developer", value = "Arcade Software", showDivider = false)
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { showDeveloperDetails = true }
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = "Developer", color = contentColor, fontSize = 16.sp)
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(text = "Arcade Software", color = Color.Gray, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(text = "〉", color = Color.Gray, fontSize = 14.sp)
+                                }
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(0.5.dp)
+                                    .padding(start = 16.dp)
+                                    .background(if (isLightTheme) Color(0xFFC7C7CC) else Color(0xFF38383A))
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onFaqClick() }
+                                    .padding(16.dp),
+                                horizontalArrangement = Arrangement.SpaceBetween,
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(text = "Help & FAQ", color = contentColor, fontSize = 16.sp)
+                                Text(text = "〉", color = Color.Gray, fontSize = 14.sp)
+                            }
                         }
                     }
                 }
@@ -234,6 +242,21 @@ fun SettingsScreen(
                         }
                     }
                 }
+            }
+        }
+
+        if (showDeveloperDetails) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black.copy(alpha = 0.3f))
+                    .clickable { showDeveloperDetails = false },
+                contentAlignment = Alignment.Center
+            ) {
+                IosDeveloperDetailsDialog(
+                    onDismiss = { showDeveloperDetails = false },
+                    backdrop = backdrop
+                )
             }
         }
     }
@@ -375,6 +398,120 @@ fun IosThemeDialog(
 }
 
 @Composable
+fun IosDeveloperDetailsDialog(
+    onDismiss: () -> Unit,
+    backdrop: Backdrop
+) {
+    val isLightTheme = LocalIsLightTheme.current
+    val textColor = if (isLightTheme) Color.Black else Color.White
+    val systemBlue = if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)
+
+    GlassCard(
+        backdrop = backdrop,
+        modifier = Modifier.width(320.dp),
+        shape = RoundedCornerShape(28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(1.dp), modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Developer Details",
+                        color = textColor,
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                    Text(
+                        text = "About the developer",
+                        color = Color.Gray,
+                        fontSize = 11.sp
+                    )
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(28.dp)
+                        .clip(CircleShape)
+                        .background(if (isLightTheme) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.1f))
+                        .clickable { onDismiss() },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        text = "✕",
+                        color = textColor.copy(alpha = 0.6f),
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(if (isLightTheme) Color.Black.copy(0.08f) else Color.White.copy(0.1f))
+            )
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = "DEVELOPER", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Abhinav Thakur", color = textColor, fontSize = 15.sp)
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = "ORGANIZATION", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "ProjectArcade", color = textColor, fontSize = 15.sp)
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = "DESCRIPTION", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Lykon Shield is open-source and dedicated to privacy-first community utility.",
+                        color = textColor,
+                        fontSize = 14.sp
+                    )
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(0.5.dp)
+                    .background(if (isLightTheme) Color.Black.copy(0.08f) else Color.White.copy(0.1f))
+            )
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(systemBlue)
+                    .clickable { onDismiss() }
+                    .padding(vertical = 12.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = "Close",
+                    color = Color.White,
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+    }
+}
+
+@Composable
 fun ProfileCard(backdrop: Backdrop) {
     val isLightTheme = LocalIsLightTheme.current
     val textColor = if (isLightTheme) Color.Black else Color.White
@@ -407,7 +544,7 @@ fun ProfileCard(backdrop: Backdrop) {
                     color = textColor
                 )
                 Text(
-                    text = "Version 1.0.6 (Stable)",
+                    text = "Version ${BuildConfig.VERSION_NAME} (Stable)",
                     color = Color.Gray,
                     fontSize = 14.sp
                 )

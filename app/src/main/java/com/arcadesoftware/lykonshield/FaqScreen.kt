@@ -2,19 +2,17 @@ package com.arcadesoftware.lykonshield
 
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.*
+import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.ime
-import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -27,17 +25,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.vector.path
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.graphicsLayer
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -45,7 +40,6 @@ import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.lens
 import com.kyant.backdrop.effects.vibrancy
-import com.kyant.backdrop.catalog.components.LiquidToggle
 
 // SF Symbol: magnifyingglass
 private val SFSearchIcon: ImageVector
@@ -111,136 +105,45 @@ private val SFXmarkCircleIcon: ImageVector
         }
     }.build()
 
-@Composable
-private fun SkeletonShimmerItem(isLightTheme: Boolean, backdrop: Backdrop) {
-    val shimmerColors = if (isLightTheme) {
-        listOf(Color(0xFFE0E0E0), Color(0xFFF5F5F5), Color(0xFFE0E0E0))
-    } else {
-        listOf(Color(0xFF2C2C2E), Color(0xFF3A3A3C), Color(0xFF2C2C2E))
-    }
-
-    val transition = rememberInfiniteTransition(label = "shimmer")
-    val translateAnim by transition.animateFloat(
-        initialValue = -300f,
-        targetValue = 900f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(1200, easing = LinearEasing),
-            repeatMode = RepeatMode.Restart
-        ),
-        label = "shimmerOffset"
-    )
-
-    val brush = Brush.linearGradient(
-        colors = shimmerColors,
-        start = Offset(translateAnim, 0f),
-        end = Offset(translateAnim + 300f, 0f)
-    )
-
-    GlassCard(
-        backdrop = backdrop,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp)
+// Chevron Down Symbol for collapsible header indicator
+private val ChevronDownIcon: ImageVector
+    get() = ImageVector.Builder(
+        name = "ChevronDown",
+        defaultWidth = 24.dp,
+        defaultHeight = 24.dp,
+        viewportWidth = 24f,
+        viewportHeight = 24f
+    ).path(
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 2f,
+        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.weight(1f)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .clip(RoundedCornerShape(8.dp))
-                        .background(brush)
-                )
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Box(
-                        modifier = Modifier
-                            .width(120.dp)
-                            .height(14.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(brush)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .width(180.dp)
-                            .height(10.dp)
-                            .clip(RoundedCornerShape(4.dp))
-                            .background(brush)
-                    )
-                }
-            }
-            Box(
-                modifier = Modifier
-                    .width(52.dp)
-                    .height(28.dp)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(brush)
-            )
-        }
-    }
-}
+        moveTo(6f, 9f)
+        lineTo(12f, 15f)
+        lineTo(18f, 9f)
+    }.build()
+
+data class FaqItem(val question: String, val answer: String)
 
 @Composable
-fun ExcludeAppsScreen(
+fun FaqScreen(
     navController: androidx.navigation.NavController,
-    excludedApps: Set<String>,
-    onToggleApp: (String) -> Unit,
     topPadding: androidx.compose.ui.unit.Dp,
     bottomPadding: androidx.compose.ui.unit.Dp,
     backdrop: Backdrop
 ) {
     val isLightTheme = LocalIsLightTheme.current
     val contentColor = if (isLightTheme) Color.Black else Color.White
-    val cardBg = if (isLightTheme) Color.White else Color(0xFF1C1C1E)
-    val localBackdrop = rememberLayerBackdrop()
     val screenContentBackdrop = rememberLayerBackdrop()
 
     val context = LocalContext.current
-    val pm = context.packageManager
+    val questions = remember { context.resources.getStringArray(R.array.faq_questions) }
+    val answers = remember { context.resources.getStringArray(R.array.faq_answers) }
 
-    var appList by remember { mutableStateOf<List<Triple<String, String, android.graphics.drawable.Drawable?>>>(emptyList()) }
-    var isLoading by remember { mutableStateOf(true) }
-
-    LaunchedEffect(Unit) {
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
-            try {
-                val launcherIntent = android.content.Intent(android.content.Intent.ACTION_MAIN, null).apply {
-                    addCategory(android.content.Intent.CATEGORY_LAUNCHER)
-                }
-                val launcherPackages = pm.queryIntentActivities(launcherIntent, 0)
-                    .mapNotNull { it.activityInfo?.packageName }
-                    .toSet()
-
-                val packages = pm.getInstalledPackages(0)
-                val filtered = packages.mapNotNull { pkg ->
-                    val appInfo = pkg.applicationInfo
-                    if (appInfo != null) {
-                        val isSystem = (appInfo.flags and android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0
-                        if (!isSystem || launcherPackages.contains(pkg.packageName)) {
-                            val name = appInfo.loadLabel(pm).toString()
-                            val pkgName = pkg.packageName
-                            val icon = appInfo.loadIcon(pm)
-                            Triple(name, pkgName, icon)
-                        } else null
-                    } else null
-                }.sortedBy { it.first.lowercase() }
-
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    appList = filtered
-                    isLoading = false
-                }
-            } catch (e: Exception) {
-                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
-                    isLoading = false
-                }
-            }
+    val faqItems = remember(questions, answers) {
+        questions.indices.map { idx ->
+            FaqItem(questions[idx], answers.getOrElse(idx) { "" })
         }
     }
 
@@ -248,29 +151,13 @@ fun ExcludeAppsScreen(
     var isSearchExpanded by remember { mutableStateOf(false) }
     val focusRequester = remember { FocusRequester() }
 
-    val finalApps = remember(appList, searchQuery, isLoading) {
-        val base = if (appList.isEmpty() && !isLoading) {
-            listOf(
-                Triple("Google Chrome", "com.android.chrome", null),
-                Triple("YouTube", "com.google.android.youtube", null),
-                Triple("Instagram", "com.instagram.android", null),
-                Triple("WhatsApp", "com.whatsapp", null),
-                Triple("Facebook", "com.facebook.katana", null),
-                Triple("Spotify", "com.spotify.music", null),
-                Triple("TikTok", "com.zhiliaoapp.musically", null),
-                Triple("Netflix", "com.netflix.mediaclient", null),
-                Triple("Gmail", "com.google.android.gm", null)
-            )
-        } else {
-            appList
-        }
-
+    val filteredFaq = remember(faqItems, searchQuery) {
         if (searchQuery.isEmpty()) {
-            base
+            faqItems
         } else {
-            base.filter {
-                it.first.contains(searchQuery, ignoreCase = true) ||
-                it.second.contains(searchQuery, ignoreCase = true)
+            faqItems.filter {
+                it.question.contains(searchQuery, ignoreCase = true) ||
+                it.answer.contains(searchQuery, ignoreCase = true)
             }
         }
     }
@@ -305,7 +192,7 @@ fun ExcludeAppsScreen(
             ) {
                 item {
                     Text(
-                        text = "Bypass Apps",
+                        text = "FAQ",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         color = contentColor,
@@ -313,11 +200,7 @@ fun ExcludeAppsScreen(
                     )
                 }
 
-                if (isLoading) {
-                    items(8) {
-                        SkeletonShimmerItem(isLightTheme = isLightTheme, backdrop = backdrop)
-                    }
-                } else if (finalApps.isEmpty()) {
+                if (filteredFaq.isEmpty()) {
                     item {
                         Box(
                             modifier = Modifier
@@ -326,91 +209,19 @@ fun ExcludeAppsScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = "No apps found",
+                                text = "No questions found",
                                 color = Color.Gray,
                                 fontSize = 16.sp
                             )
                         }
                     }
                 } else {
-                    items(finalApps) { app ->
-                        val isBypassed = excludedApps.contains(app.second)
-                        GlassCard(
+                    items(filteredFaq) { item ->
+                        FaqCard(
+                            item = item,
                             backdrop = backdrop,
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(16.dp)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Row(
-                                    horizontalArrangement = Arrangement.spacedBy(12.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.weight(1f)
-                                ) {
-                                    if (app.third != null) {
-                                        val drawable = app.third!!
-                                        val bitmap = remember(drawable) {
-                                            val bmp = android.graphics.Bitmap.createBitmap(
-                                                drawable.intrinsicWidth.coerceAtLeast(1),
-                                                drawable.intrinsicHeight.coerceAtLeast(1),
-                                                android.graphics.Bitmap.Config.ARGB_8888
-                                            )
-                                            val canvas = android.graphics.Canvas(bmp)
-                                            drawable.setBounds(0, 0, canvas.width, canvas.height)
-                                            drawable.draw(canvas)
-                                            bmp
-                                        }
-                                        Image(
-                                            bitmap = bitmap.asImageBitmap(),
-                                            contentDescription = app.first,
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                        )
-                                    } else {
-                                        Box(
-                                            modifier = Modifier
-                                                .size(40.dp)
-                                                .clip(RoundedCornerShape(8.dp))
-                                                .background(Color(0xFF007AFF)),
-                                            contentAlignment = Alignment.Center
-                                        ) {
-                                            Text(
-                                                text = app.first.take(1),
-                                                color = Color.White,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 18.sp
-                                            )
-                                        }
-                                    }
-
-                                    Column {
-                                        Text(
-                                            text = app.first,
-                                            fontWeight = FontWeight.SemiBold,
-                                            fontSize = 16.sp,
-                                            color = contentColor
-                                        )
-                                        Text(
-                                            text = app.second,
-                                            fontSize = 12.sp,
-                                            color = Color.Gray
-                                        )
-                                    }
-                                }
-
-                                LiquidToggle(
-                                    selected = { isBypassed },
-                                    onSelect = { onToggleApp(app.second) },
-                                    backdrop = backdrop
-                                )
-                            }
-                        }
+                            contentColor = contentColor
+                        )
                     }
                 }
             }
@@ -493,7 +304,6 @@ fun ExcludeAppsScreen(
                         modifier = Modifier.size(20.dp)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
-                    // Text field — left-aligned (CenterStart), not centered
                     androidx.compose.foundation.text.BasicTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
@@ -510,7 +320,7 @@ fun ExcludeAppsScreen(
                             Box(contentAlignment = Alignment.CenterStart) {
                                 if (searchQuery.isEmpty()) {
                                     Text(
-                                        text = "Search apps...",
+                                        text = "Search FAQ...",
                                         color = Color.Gray,
                                         fontSize = 16.sp
                                     )
@@ -570,6 +380,71 @@ fun ExcludeAppsScreen(
                     contentDescription = "Search",
                     tint = contentColor,
                     modifier = Modifier.size(22.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun FaqCard(
+    item: FaqItem,
+    backdrop: Backdrop,
+    contentColor: Color
+) {
+    var isExpanded by remember { mutableStateOf(false) }
+    val rotationAngle by animateFloatAsState(
+        targetValue = if (isExpanded) 180f else 0f,
+        animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing),
+        label = "chevronRotation"
+    )
+
+    GlassCard(
+        backdrop = backdrop,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable { isExpanded = !isExpanded },
+        shape = RoundedCornerShape(16.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = item.question,
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 16.sp,
+                    color = contentColor,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = ChevronDownIcon,
+                    contentDescription = "Toggle Expand",
+                    tint = Color.Gray,
+                    modifier = Modifier
+                        .size(20.dp)
+                        .graphicsLayer(rotationZ = rotationAngle)
+                        .padding(start = 4.dp)
+                )
+            }
+            AnimatedVisibility(
+                visible = isExpanded,
+                enter = expandVertically() + fadeIn(),
+                exit = shrinkVertically() + fadeOut()
+            ) {
+                Text(
+                    text = item.answer,
+                    fontSize = 14.sp,
+                    color = Color.Gray,
+                    lineHeight = 20.sp
                 )
             }
         }
