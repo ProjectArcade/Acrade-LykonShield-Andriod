@@ -310,12 +310,12 @@ class MainActivity : ComponentActivity() {
                             "settings" -> "Settings"
                             else -> "Shield"
                         }
-                        CollapsibleTopBar(
-                            title = topBarTitle,
-                            scrollOffsetProvider = scrollOffsetProvider,
-                            backdrop = backdrop,
-                            modifier = Modifier.align(Alignment.TopCenter)
-                        )
+//                        CollapsibleTopBar(
+//                            title = topBarTitle,
+//                            scrollOffsetProvider = scrollOffsetProvider,
+//                            backdrop = backdrop,
+//                            modifier = Modifier.align(Alignment.TopCenter)
+//                        )
 
                         Box(
                             modifier = Modifier

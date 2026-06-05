@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Lykon Shield</string>
+    <string name="version">1.0.6</string>
 </resources>
