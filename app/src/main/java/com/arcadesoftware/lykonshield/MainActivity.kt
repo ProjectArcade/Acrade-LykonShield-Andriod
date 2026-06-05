@@ -156,7 +156,6 @@ class MainActivity : ComponentActivity() {
                     selectedTabIndex = idx
                     val route = tabs[idx]
                     val activeRoute = navController.currentBackStackEntry?.destination?.route ?: "home"
-                    android.util.Log.d("MainActivity", "navigateToTab: idx=$idx, route=$route, activeRoute=$activeRoute")
                     if (route != activeRoute) {
                         navController.navigate(route) {
                             popUpTo(navController.graph.startDestinationId) {
