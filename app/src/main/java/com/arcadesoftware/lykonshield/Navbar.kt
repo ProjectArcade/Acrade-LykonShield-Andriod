@@ -70,7 +70,7 @@ import kotlinx.coroutines.launch
 import kotlin.math.*
 
 // Lerp helper
-private fun lerp(start: Float, stop: Float, fraction: Float): Float {
+fun lerp(start: Float, stop: Float, fraction: Float): Float {
     return start + fraction * (stop - start)
 }
 
