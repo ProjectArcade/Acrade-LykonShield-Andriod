@@ -619,7 +619,7 @@ fun IosProtectionSlider(
 ) {
     val valueRange = 0f..(totalLevels - 1).toFloat()
 
-    val levelColors = listOf(Color(0xFFF44336), Color(0xFFFF9500), Color(0xFF00FF3D))
+    val levelColors = listOf(Color(0xFFF44336), Color(0xFFFF9500), Color(0xFF34C759))
 
     val trackColor = if (isLightTheme) Color(0xFF787878).copy(0.2f) else Color(0xFF787880).copy(0.36f)
     val trackBackdrop = rememberLayerBackdrop()
