@@ -74,7 +74,7 @@ fun DeveloperScreen(
             ) {
                 item {
                     Text(
-                        text = "Developer Options",
+                        text = "Advance Settings",
                         fontSize = 32.sp,
                         fontWeight = FontWeight.Bold,
                         color = contentColor

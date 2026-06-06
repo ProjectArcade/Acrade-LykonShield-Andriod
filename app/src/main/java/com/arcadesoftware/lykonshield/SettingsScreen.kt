@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
@@ -35,8 +36,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.arcadesoftware.lykonshield.ui.theme.LykonShieldTheme
 import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.catalog.components.LiquidToggle
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
@@ -243,7 +246,7 @@ fun SettingsScreen(
                                 horizontalArrangement = Arrangement.SpaceBetween,
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
-                                Text(text = "Developer Options", color = contentColor, fontSize = 16.sp)
+                                Text(text = "Advance Settings", color = contentColor, fontSize = 16.sp)
                                 Text(text = "〉", color = Color.Gray, fontSize = 14.sp)
                             }
                         }
@@ -542,7 +545,7 @@ fun ProfileCard(backdrop: Backdrop) {
     val isLightTheme = LocalIsLightTheme.current
     val textColor = if (isLightTheme) Color.Black else Color.White
 
-    val iconResId = if (isLightTheme) R.drawable.ligh_icon else R.drawable.dark_icon
+    val iconResId = if (isLightTheme) R.drawable.light_icon else R.drawable.dark_icon
 
     GlassCard(
         backdrop = backdrop,
@@ -608,6 +611,94 @@ fun SettingsRow(
                     .padding(start = 16.dp)
                     .background(if (isLightTheme) Color(0xFFC7C7CC) else Color(0xFF38383A))
             )
+        }
+    }
+}
+
+@Composable
+fun IosBaseDialogCardLightPreview() {
+    LykonShieldTheme(darkTheme = false) {
+        CompositionLocalProvider(
+            LocalIsLightTheme provides true,
+            LocalIsLiquidGlassEnabled provides true,
+            LocalBackdropBlurRadius provides 24f
+        ) {
+            val backdrop = rememberLayerBackdrop {
+                drawRect(Color(0xFFF2F2F7))
+                drawContent()
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color(0xFFF2F2F7))
+                    .layerBackdrop(backdrop),
+                contentAlignment = Alignment.Center
+            ) {
+                IosBaseDialogCard(backdrop = backdrop) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Preview Dialog",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color.Black
+                        )
+                        Text(
+                            text = "This is a sample content for the IosBaseDialogCard preview in light theme.",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun IosBaseDialogCardDarkPreview() {
+    LykonShieldTheme(darkTheme = true) {
+        CompositionLocalProvider(
+            LocalIsLightTheme provides false,
+            LocalIsLiquidGlassEnabled provides true,
+            LocalBackdropBlurRadius provides 24f
+        ) {
+            val backdrop = rememberLayerBackdrop {
+                drawRect(Color.Black)
+                drawContent()
+            }
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(Color.Black)
+                    .layerBackdrop(backdrop),
+                contentAlignment = Alignment.Center
+            ) {
+                IosBaseDialogCard(backdrop = backdrop) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = "Preview Dialog",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color.White
+                        )
+                        Text(
+                            text = "This is a sample content for the IosBaseDialogCard preview in dark theme.",
+                            color = Color.Gray,
+                            fontSize = 14.sp
+                        )
+                    }
+                }
+            }
         }
     }
 }

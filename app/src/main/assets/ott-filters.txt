@@ -137,6 +137,8 @@
 ||log2.spotify.com^
 ||metrics.spotify.com^
 ||crashdump.spotify.com^
+||adstats.spotify.com^
+||ads.spotify.com^
 
 ! --- SAX programmatic pipeline (Google/DV360 side) ---
 ||pubads.g.doubleclick.net^$domain=spotify.com

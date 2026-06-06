@@ -80,7 +80,7 @@ class LykonVpnService : VpnService() {
 
     override fun onCreate() {
         super.onCreate()
-        dnsExecutor = Executors.newFixedThreadPool(4)
+        dnsExecutor = Executors.newCachedThreadPool()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -213,7 +213,7 @@ class LykonVpnService : VpnService() {
             while (isRunning) {
                 val readBytes = inputStream.read(packetBuffer)
                 if (readBytes <= 0) {
-                    Thread.sleep(2)
+                    Thread.sleep(20)
                     continue
                 }
 

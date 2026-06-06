@@ -26,7 +26,7 @@ object ShieldStatsManager {
     private const val KEY_CATEGORY_BLOCKS = "category_blocks"
 
     /** Number of blocks between SharedPreferences flushes. */
-    private const val PERSIST_INTERVAL = 1
+    private const val PERSIST_INTERVAL = 50
 
     /** Average bytes saved per blocked DNS request (typical small ad/tracker resource). */
     private const val AVG_BYTES_SAVED_PER_BLOCK = 15 * 1024L

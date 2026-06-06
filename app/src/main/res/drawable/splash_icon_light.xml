@@ -5,5 +5,5 @@
         android:top="40dp"
         android:right="40dp"
         android:bottom="40dp"
-        android:drawable="@drawable/ligh_icon" />
+        android:drawable="@drawable/light_icon" />
 </layer-list>
