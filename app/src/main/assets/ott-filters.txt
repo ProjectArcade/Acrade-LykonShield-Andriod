@@ -1,0 +1,385 @@
+! Title: LykonShield OTT Ad & Telemetry Filters
+! Description: Research-backed ad and telemetry blocking for Indian and global OTT/music streaming apps.
+! Sources: AdGuard GitHub #1741, AdAway PR #270, StevenBlack hosts #668/#2277,
+!          MarshMeadow/Block-Spotify-ADS-DNS-List, Spotify Community forums,
+!          hagezi/dns-blocklists, AdGuardSDNSFilter
+! Maintainer: ProjectArcade / Lykon Shield
+! Homepage: https://github.com/ProjectArcade/Arcade-Lykon
+! License: GLP 3.0
+! Version: 3.0.0
+! Updated: 2025-06-06
+! Syntax: Adblock Plus / adblock-rust (Lykon Shield)
+!
+
+! JIOHOTSTAR
+! (Disney+ Hotstar + JioCinema merged Feb 14, 2025)
+! Source: AdGuard issue #1741, AdAway PR #270, StevenBlack #2277
+!===========================================================
+
+! --- Ad delivery & SSAI orchestration (confirmed working blocks) ---
+||bifrost.hotstar.com^
+||bifrost-1.hotstar.com^
+||bifrost-api.hotstar.com^
+||videoads.hotstar.com^
+||brands.hotstar.com^
+||ads.hotstar.com^
+
+! --- Ad CDN (Akamai — confirmed by AdAway PR #270 & StevenBlack #2277) ---
+||hesads.akamaized.net^
+! ||hssportsprepack.akamaized.net^  ! Commented out: serves actual sports video segments/playlists; blocking breaks video loading.
+
+! --- Analytics & telemetry (confirmed from AdGuard issue #1741) ---
+||fp-analytics.hotstar.com^
+||hb-analytics.hotstar.com^
+||settings-analytics.hotstar.com^
+||events-analytics.hotstar.com^
+||agl-intl.hotstar.com^
+||hses.hotstar.com^
+||hses5.hotstar.com^
+||logs.hotstar.com^
+||sigma.hotstar.com^
+||lending-logs.hotstar.com^
+||metrics.hotstar.com^
+||metrics-ingest.hotstar.com^
+||sntx.hotstar.com^
+
+! --- Conviva QoS SDK (fires on every ad break) ---
+||cws-hotstar.conviva.com^
+
+! --- Jio telemetry (post-merger Reliance infra) ---
+||telemetry.jio.com^
+||logs.jio.com^
+||analytics.jio.com^
+||events.jio.com^
+||trk.jio.com^
+||adtag.jio.com^
+||ads.jio.com^
+
+! --- Former JioCinema / Viacom18 infra ---
+||ads.viacom18.com^
+||analytics.viacom18.com^
+||metrics.viacom18.com^
+||tracking.viacom18.com^
+||cws-jiocinema.conviva.com^
+
+!===========================================================
+! AMAZON MX PLAYER
+! Source: MX Play direct domains (community verified)
+!===========================================================
+
+! --- Ad servers ---
+||ads.mxplay.com^
+||ads-server.mxplay.com^
+||mxaserver.mxplay.com^
+||ads.mxplayer.in^
+||adserver.mxplayer.in^
+
+! --- Telemetry & events ---
+||evt.mxplay.com^
+||analytics.mxplay.com^
+||metrics.mxplay.com^
+||tracking.mxplay.com^
+||logs.mxplay.com^
+||cdp.mxplay.com^
+||telemetry.mxplayer.in^
+||tracking.mxplayer.in^
+||analytics.mxplayer.in^
+||logs.mxplayer.in^
+
+! --- Legacy Zenjoy ad network (MX Player pre-Amazon era) ---
+||zenmxapps.com^
+||zenjoy.net^
+||zenjoy.me^
+
+! --- Amazon msh telemetry & ad domains ---
+||msh.amazon.com^
+||msh.amazon.co.uk^
+
+! --- Amazon-side ad/tracking infra used in MX Player ---
+||mads.amazon.com^
+||fls-na.amazon.com^
+||unagi-na.amazon.com^
+||s3.ll.videorolls.row.aiv-cdn.net^
+||amazon-adsystem.com^
+||advertising.amazon.dev^
+
+!===========================================================
+! SPOTIFY
+! Source: MarshMeadow/Block-Spotify-ADS-DNS-List,
+!         StevenBlack/hosts #668, Spotify Community forums
+! Note: SAX (Apr 2025) uses rotating programmatic paths via
+!       Google DV360/The Trade Desk. Static audio-ad trigger
+!       domains below still effective for mobile app.
+!===========================================================
+
+! --- Audio ad delivery (confirmed) ---
+||audio-ads.spotify.com^
+||ads-fa.spotify.com^
+||heads-ec.spotify.com^
+
+! --- Ad event tracking (fires on every ad impression) ---
+||adeventtracker.spotify.com^
+||pixel.spotify.com^
+
+! --- Analytics & telemetry ---
+||analytics.spotify.com^
+||log.spotify.com^
+||log2.spotify.com^
+||metrics.spotify.com^
+||crashdump.spotify.com^
+
+! --- SAX programmatic pipeline (Google/DV360 side) ---
+||pubads.g.doubleclick.net^$domain=spotify.com
+||googleads.g.doubleclick.net^$domain=spotify.com
+||pagead2.googlesyndication.com^$domain=spotify.com
+||securepubads.g.doubleclick.net^$domain=spotify.com
+||s0.2mdn.net^$domain=spotify.com
+
+!===========================================================
+! SONYLIV
+!===========================================================
+
+||ads.sonyliv.com^
+||adserver.sonyliv.com^
+||ssai.sonyliv.com^
+||analytics.sonyliv.com^
+||metrics.sonyliv.com^
+||events.sonyliv.com^
+||telemetry.sonyliv.com^
+||logs.sonyliv.com^
+||tracking.sonyliv.com^
+||cws-sonyliv.conviva.com^
+
+!===========================================================
+! ZEE5
+!===========================================================
+
+||ads.zee5.com^
+||adserver.zee5.com^
+||ssai.zee5.com^
+||analytics.zee5.com^
+||metrics.zee5.com^
+||events.zee5.com^
+||logs.zee5.com^
+||track.zee5.com^
+||telemetry.zee5.com^
+||cws-zee5.conviva.com^
+
+!===========================================================
+! AMAZON PRIME VIDEO (India ad-supported tier)
+!===========================================================
+
+||mads.amazon.com^
+||fls-na.amazon.com^
+||fls.amazon.in^
+||aax.amazon-adsystem.com^
+||c.amazon-adsystem.com^
+||device-metrics-us.amazon.com^
+||device-metrics-us-2.amazon.com^
+||unagi.amazon.in^
+
+!===========================================================
+! JIOSAAVN (formerly Saavn)
+!===========================================================
+
+||ads.jiosaavn.com^
+||adserver.jiosaavn.com^
+||analytics.jiosaavn.com^
+||metrics.jiosaavn.com^
+||events.jiosaavn.com^
+||track.jiosaavn.com^
+
+!===========================================================
+! GAANA (Times Internet)
+!===========================================================
+
+||ads.gaana.com^
+||adserver.gaana.com^
+||analytics.gaana.com^
+||metrics.gaana.com^
+||track.gaana.com^
+||beacon.gaana.com^
+
+!===========================================================
+! HUNGAMA
+!===========================================================
+
+||ads.hungama.com^
+||adserver.hungama.com^
+||analytics.hungama.com^
+||metrics.hungama.com^
+||tracking.hungama.com^
+
+!===========================================================
+! ALTBALAJI
+!===========================================================
+
+||ads.altbalaji.com^
+||analytics.altbalaji.com^
+||metrics.altbalaji.com^
+||tracking.altbalaji.com^
+
+!===========================================================
+! AHA (Telugu/Tamil OTT)
+!===========================================================
+
+||ads.aha.video^
+||analytics.aha.video^
+||tracking.aha.video^
+
+!===========================================================
+! NETFLIX (ad-supported tier — telemetry only)
+!===========================================================
+
+||ads.netflix.com^
+||adtechg.netflix.com^
+||ichnaea.netflix.com^
+
+!===========================================================
+! YOUTUBE MUSIC / YOUTUBE (ad calls only)
+!===========================================================
+
+||ad.youtube.com^
+||ads.youtube.com^
+
+!===========================================================
+! ═══════════════════════════════════════════════════════════
+! SHARED AD & TRACKING INFRASTRUCTURE
+! Used across ALL Indian OTT/music apps
+! ═══════════════════════════════════════════════════════════
+!===========================================================
+
+! --- Google IMA SDK (MOST IMPACTFUL: used by every Indian OTT app for
+!     pre-roll / mid-roll VAST video ads via client-side insertion) ---
+||imasdk.googleapis.com^
+||pubads.g.doubleclick.net^
+||googleads.g.doubleclick.net^
+||securepubads.g.doubleclick.net^
+||pagead2.googlesyndication.com^
+||tpc.googlesyndication.com^
+||googleadservices.com^
+||pagead46.l.doubleclick.net^
+||stats.g.doubleclick.net^
+||adservice.google.com^
+
+! --- Conviva (video QoS telemetry — used by Hotstar, SonyLIV, ZEE5, MX Player,
+!     Prime Video; fires on every ad break start/end) ---
+||cws.conviva.com^
+||touchstone.conviva.com^
+||client-s.conviva.com^
+||live.conviva.com^
+||pulse.conviva.com^
+
+! --- Comscore / Scorecard Research (audience measurement — fires in every
+!     OTT app, every session) ---
+||sb.scorecardresearch.com^
+||sa.scorecardresearch.com^
+||beacon.scorecardresearch.com^
+||b.scorecardresearch.com^
+
+! --- Nielsen (audience measurement — used by Hotstar, SonyLIV, ZEE5) ---
+||secure-dcr.imrworldwide.com^
+||dcr.imrworldwide.com^
+||cdn-gl.imrworldwide.com^
+
+! --- MoEngage (in-app push/marketing SDK — Hotstar, ZEE5, SonyLIV, JioSaavn) ---
+||sdk.moengage.com^
+||api.moengage.com^
+||analytics.moengage.com^
+||notif.moengage.com^
+
+! --- CleverTap (user engagement / push campaigns — SonyLIV, ZEE5, Gaana) ---
+||api.clevertap.com^
+||wzrkt.com^
+||eu1.wzrkt.com^
+||in1.wzrkt.com^
+
+! --- Adjust (mobile attribution — fires on every app open & ad click) ---
+||app.adjust.com^
+||s2s.adjust.com^
+||view.adjust.com^
+||stats.adjust.com^
+||t.adjust.com^
+
+! --- AppsFlyer (mobile attribution — used widely across Indian OTT) ---
+||appsflyer.com^
+||appsflyersdk.com^
+
+! --- Kochava (attribution — used by JioSaavn, Hotstar) ---
+||control.kochava.com^
+||track.kochava.com^
+
+! --- Branch.io (deep-link attribution) ---
+||api.branch.io^
+||bnc.lt^
+||app.link^
+
+! --- Firebase Crashlytics & App Measurement (telemetry in nearly all apps) ---
+||firebase-settings.crashlytics.com^
+||settings.crashlytics.com^
+||reports.crashlytics.com^
+||crashlytics.com^
+||app-measurement.com^
+||firebaselogging-pa.googleapis.com^
+||firebase.googleapis.com^$xmlhttprequest,third-party
+
+! --- Sentry (crash reporting) ---
+||sentry.io^$xmlhttprequest,third-party
+
+! --- MOAT / Oracle Advertising (ad verification — fires on every video ad) ---
+||js.moatads.com^
+||z.moatads.com^
+||moatads.com^
+
+! --- Integral Ad Science / DoubleVerify (ad verification) ---
+||pixel.adsafeprotected.com^
+||static.adsafeprotected.com^
+||cdn.doubleverify.com^
+||verify.doubleverify.com^
+
+! --- SpotX / Magnite (video ad exchange — used by Indian OTT for
+!     programmatic inventory) ---
+||search.spotxchange.com^
+||js.spotx.tv^
+||cdn.spotx.tv^
+||sync.spotxchange.com^
+||prebid.media.net^
+
+! --- AppNexus / Xandr (ad exchange) ---
+||secure.adnxs.com^
+||ib.adnxs.com^
+||acdn.adnxs.com^
+
+! --- Freewheel (video ad server — used by some Indian premium OTT) ---
+||ad.fwmrm.net^
+||adm.fwmrm.net^
+||mssl.fwmrm.net^
+
+!===========================================================
+! SAFE TO BLOCK (no content breakage verified)
+!===========================================================
+
+! --- Generic cross-platform ad beacons ---
+||doubleclick.net^$third-party
+||googlesyndication.com^$third-party
+||2mdn.net^
+
+!===========================================================
+! ⚠ WHITELIST RECOMMENDATIONS (add these as exceptions)
+! These domains share infrastructure with ads but also carry
+! content — blocking will break playback or login.
+! Add as: @@||domain.com^
+!===========================================================
+! @@||api.hotstar.com^
+! @@||player.hotstar.com^
+! @@||hss.hotstar.com^
+! @@||auth.hotstar.com^
+! @@||spclient.wg.spotify.com^     ! Spotify client API — breaks playback if blocked
+! @@||audio-ec.spotify.com^        ! Spotify audio delivery
+! @@||audio2.spotify.com^          ! Spotify audio delivery
+! @@||service.hotstar.com^         ! Hotstar content API
+! @@||services.hotstar.com^        ! Hotstar content API
+! @@||vs.hotstar.com^              ! Hotstar video streaming
+
+
+

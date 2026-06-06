@@ -50,7 +50,7 @@ object AdblockEngine {
 
     // ── Filter file names (used in both assets and internal storage) ─────
 
-    private val FILTER_FILES = listOf("easylist.txt", "easyprivacy.txt", "ublock-filters.txt")
+    private val FILTER_FILES = listOf("easylist.txt", "easyprivacy.txt", "ublock-filters.txt", "ott-filters.txt")
     private val EXTRA_FILTER_FILES = listOf("peter-lowe.txt", "oisd-basic.txt")
     const val FILTERS_DIR = "filters"
 
@@ -142,11 +142,16 @@ object AdblockEngine {
     private val systemAllowlist = setOf(
         "connectivitycheck.gstatic.com",
         "connectivitycheck.android.com",
-        "google.com",
-        "googleapis.com",
-        "gstatic.com",
         "time.android.com",
-        "time.google.com"
+        "time.google.com",
+        "clients3.google.com",
+        "fcm.googleapis.com",
+        "fcm.google.com",
+        "mtalk.google.com",
+        "play.googleapis.com",
+        "android.clients.google.com",
+        "play-fe.googleapis.com",
+        "playstoregatewayadapter-pa.googleapis.com"
     )
 
     // --- Block Categories ---
@@ -661,6 +666,18 @@ object AdblockEngine {
         try {
             val cacheFile = java.io.File(context.filesDir, "filters.cache")
             if (!cacheFile.exists() || cacheFile.length() == 0L) return false
+
+            // Invalidate cache if older than last app update (e.g. assets updated)
+            try {
+                val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                if (cacheFile.lastModified() < packageInfo.lastUpdateTime) {
+                    Log.d(TAG, "Cache file is older than last app update, invalidating.")
+                    cacheFile.delete()
+                    return false
+                }
+            } catch (e: Exception) {
+                Log.w(TAG, "Failed to check package update time", e)
+            }
 
             cacheFile.bufferedReader().use { reader ->
                 val versionLine = reader.readLine() ?: return false

@@ -114,6 +114,16 @@ class LykonVpnService : VpnService() {
                 .setMtu(VPN_MTU)
                 .setBlocking(true)
 
+            // Block IPv6 DNS leaks by routing IPv6 DNS queries into the VPN interface
+            try {
+                builder.addAddress("fd00:1:2:3::2", 128)
+                builder.addDnsServer("fd00:1:2:3::1")
+                builder.addRoute("fd00:1:2:3::1", 128)
+                Log.d(TAG, "Configured IPv6 DNS blackholing")
+            } catch (e: Exception) {
+                Log.w(TAG, "IPv6 is not supported by the system/device", e)
+            }
+
             // Route our local virtual DNS server through the TUN interface
             builder.addRoute(DNS_SERVER, 32)
 
