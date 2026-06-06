@@ -42,6 +42,7 @@
 ||metrics.hotstar.com^
 ||metrics-ingest.hotstar.com^
 ||sntx.hotstar.com^
+||bitdrift.io^
 
 ! --- Conviva QoS SDK (fires on every ad break) ---
 ||cws-hotstar.conviva.com^

@@ -679,38 +679,30 @@ object AdblockEngine {
                 Log.w(TAG, "Failed to check package update time", e)
             }
 
-            cacheFile.bufferedReader().use { reader ->
-                val versionLine = reader.readLine() ?: return false
-                val version = versionLine.trim().toIntOrNull() ?: return false
-                if (version != 1) return false
+            val lines = cacheFile.readLines()
+            if (lines.size < 3) return false
 
-                val blockedSizeLine = reader.readLine() ?: return false
-                val blockedSize = blockedSizeLine.trim().toIntOrNull() ?: return false
-                val blocked = ArrayList<String>(blockedSize)
-                for (i in 0 until blockedSize) {
-                    val line = reader.readLine() ?: return false
-                    blocked.add(line.trim())
-                }
+            val version = lines[0].trim().toIntOrNull() ?: return false
+            if (version != 1) return false
 
-                val allowedSizeLine = reader.readLine() ?: return false
-                val allowedSize = allowedSizeLine.trim().toIntOrNull() ?: return false
-                val allowed = ArrayList<String>(allowedSize)
-                for (i in 0 until allowedSize) {
-                    val line = reader.readLine() ?: return false
-                    allowed.add(line.trim())
-                }
+            val blockedSize = lines[1].trim().toIntOrNull() ?: return false
+            if (lines.size < 2 + blockedSize + 1) return false
+            val blocked = lines.subList(2, 2 + blockedSize)
 
-                blockedDomains.clear()
-                blockedDomains.addAll(blocked)
+            val allowedSize = lines[2 + blockedSize].trim().toIntOrNull() ?: return false
+            if (lines.size < 3 + blockedSize + allowedSize) return false
+            val allowed = lines.subList(3 + blockedSize, 3 + blockedSize + allowedSize)
 
-                allowedDomains.clear()
-                allowedDomains.addAll(allowed)
+            blockedDomains.clear()
+            blockedDomains.addAll(blocked)
 
-                // Populate Bloom Filter
-                bloomFilter.clear()
-                for (domain in blocked) {
-                    bloomFilter.add(domain)
-                }
+            allowedDomains.clear()
+            allowedDomains.addAll(allowed)
+
+            // Populate Bloom Filter
+            bloomFilter.clear()
+            for (domain in blocked) {
+                bloomFilter.add(domain)
             }
             return true
         } catch (e: Exception) {
