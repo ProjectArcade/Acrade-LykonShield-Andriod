@@ -152,7 +152,7 @@ object FilterListUpdater {
             try {
                 val tempFile = File(targetFile.parent, "${targetFile.name}.tmp")
                 val success = downloadToFile(urlStr, tempFile)
-                if (success && tempFile.exists() && tempFile.length() > 100) {
+                if (success && isValidFilterFile(tempFile)) {
                     // Atomic rename
                     if (targetFile.exists()) targetFile.delete()
                     tempFile.renameTo(targetFile)
@@ -169,6 +169,37 @@ object FilterListUpdater {
             }
         }
         return false
+    }
+
+    /**
+     * Validates if a file is a valid Adblock or hosts filter list.
+     * Excludes HTML error pages and guarantees basic filter list syntax.
+     */
+    private fun isValidFilterFile(file: File): Boolean {
+        try {
+            if (!file.exists() || file.length() < 100) return false
+            file.bufferedReader().use { reader ->
+                var linesChecked = 0
+                var hasCommentsOrRules = false
+                while (linesChecked < 20) {
+                    val line = reader.readLine()?.trim() ?: break
+                    if (line.isEmpty()) continue
+                    
+                    val lower = line.lowercase()
+                    if (lower.contains("<!doctype html") || lower.contains("<html") || lower.contains("<head") || lower.contains("<body")) {
+                        return false
+                    }
+                    
+                    if (line.startsWith("!") || line.startsWith("#") || line.startsWith("[") || line.startsWith("||") || line.startsWith("@@") || line.contains(".")) {
+                        hasCommentsOrRules = true
+                    }
+                    linesChecked++
+                }
+                return hasCommentsOrRules
+            }
+        } catch (e: Exception) {
+            return false
+        }
     }
 
     /**

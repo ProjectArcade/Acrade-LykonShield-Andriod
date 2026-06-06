@@ -61,6 +61,15 @@ class LykonVpnService : VpnService() {
             "104.16.248.249", "104.16.249.249",        // Cloudflare DoH CDN
             "76.223.122.150", "13.107.42.14"           // NextDNS, Microsoft
         )
+
+        // Known DoH/DoT provider IPs (IPv6) to intercept and block/drop
+        private val DOH_PROVIDER_IPS_IPV6 = setOf(
+            "2001:4860:4860::8888", "2001:4860:4860::8844",   // Google DNS
+            "2606:4700:4700::1111", "2606:4700:4700::1001",   // Cloudflare
+            "2620:fe::fe", "2620:fe::9",                       // Quad9
+            "2620:119:35::35", "2620:119:53::53",             // OpenDNS
+            "2a10:50c0::ad1:ff", "2a10:50c0::ad2:ff"          // AdGuard
+        )
     }
 
     private var vpnInterface: ParcelFileDescriptor? = null
@@ -133,6 +142,15 @@ class LykonVpnService : VpnService() {
                     builder.addRoute(ip, 32)
                 } catch (e: Exception) {
                     Log.e(TAG, "Failed to add route for IP: $ip", e)
+                }
+            }
+
+            // Intercept known DoT/DoH provider IPs (IPv6) so they are blackholed
+            for (ip in DOH_PROVIDER_IPS_IPV6) {
+                try {
+                    builder.addRoute(ip, 128)
+                } catch (e: Exception) {
+                    Log.e(TAG, "Failed to add route for IPv6 IP: $ip", e)
                 }
             }
 
@@ -290,11 +308,20 @@ class LykonVpnService : VpnService() {
 
         val packageName = getAppPackageForConnection(srcPort, destIpStr, PROTO_UDP) ?: "system"
 
+        // Check if query is SVCB (64) or HTTPS (65) to prevent DoH discovery/auto-upgrade
+        val queryType = DnsPacketParser.getQueryType(buffer, ipHeaderLen, udpHeaderLen)
+        if (queryType == 64 || queryType == 65) {
+            Log.d(TAG, "Blocking Secure DNS discovery query (type $queryType) for $domain from $packageName")
+            val response = DnsPacketParser.buildNxDomainResponse(requestPacket, requestLen, ipHeaderLen, udpHeaderLen)
+            writeToTun(outputStream, response)
+            ShieldStatsManager.recordBlockWithApp(applicationContext, domain, packageName)
+            return
+        }
+
         val shouldBlock = AdblockEngine.shouldBlockDomain(domain, packageName)
         Log.d(TAG, "DNS Query from $packageName: $domain -> shouldBlock = $shouldBlock")
 
         if (shouldBlock) {
-            val queryType = DnsPacketParser.getQueryType(buffer, ipHeaderLen, udpHeaderLen)
             val response = when (queryType) {
                 DnsPacketParser.DNS_TYPE_A ->
                     DnsPacketParser.buildBlockedAResponse(requestPacket, requestLen, ipHeaderLen, udpHeaderLen)

@@ -79,79 +79,37 @@ object AdblockEngine {
 
     // --- Domain Blocker (Primary - Fast) ---
 
-    private val blockedDomains = ConcurrentHashMap.newKeySet<String>()
-    private val allowedDomains = ConcurrentHashMap.newKeySet<String>()
-    private val loadedRuleCount = AtomicInteger(0)
+    @Volatile
+    private var blockedDomainHashes = LongArray(0)
 
-    // --- Bloom Filter (Verification and Optimization layer) ---
-    private val bloomFilter = BloomFilter(1000000, 5) // 1,000,000 bits (~125KB), 5 hash functions
+    @Volatile
+    private var allowedDomainHashes = LongArray(0)
+
+    private val loadedRuleCount = AtomicInteger(0)
 
     // Known DoH/DoT provider domains to block (prevents DNS bypass)
     private val dohProviderDomains = setOf(
-        // Google
-        "dns.google",
-        "dns.google.com",
-        "dns64.dns.google",
-        // Cloudflare
-        "cloudflare-dns.com",
-        "one.one.one.one",
-        "1dot1dot1dot1.cloudflare-dns.com",
-        "dns.cloudflare.com",
-        "mozilla.cloudflare-dns.com",
-        // OpenDNS
+        "dns.google", "dns.google.com", "dns64.dns.google",
+        "cloudflare-dns.com", "one.one.one.one", "1dot1dot1dot1.cloudflare-dns.com", "dns.cloudflare.com", "mozilla.cloudflare-dns.com",
         "doh.opendns.com",
-        // Quad9
-        "dns.quad9.net",
-        "dns9.quad9.net",
-        "dns10.quad9.net",
-        "dns11.quad9.net",
-        // CleanBrowsing
+        "dns.quad9.net", "dns9.quad9.net", "dns10.quad9.net", "dns11.quad9.net",
         "doh.cleanbrowsing.org",
-        // DNS.SB
         "doh.dns.sb",
-        // NextDNS
         "dns.nextdns.io",
-        // AdGuard
-        "dns.adguard-dns.com",
-        "dns-unfiltered.adguard.com",
-        // Mullvad
+        "dns.adguard-dns.com", "dns-unfiltered.adguard.com",
         "doh.mullvad.net",
-        // ControlD
         "freedns.controld.com",
-        // CIRA
         "private.canadianshield.cira.ca",
-        // Switch
         "dns.switch.ch",
-        // Xfinity
         "doh.xfinity.com",
-        // Additional providers
-        "doh.applied-privacy.net",
-        "dns.digitale-gesellschaft.ch",
-        "doh.li",
-        "dns.rubyfish.cn",
-        "odvr.nic.cz",
-        "doh.crypto.sx",
-        "dns.aa.net.uk",
-        "doh.42l.fr",
-        "doh.bortzmeyer.fr",
-        "dns.hostux.net",
-        "dns.containerpi.com"
+        "doh.applied-privacy.net", "dns.digitale-gesellschaft.ch", "doh.li", "dns.rubyfish.cn", "odvr.nic.cz", "doh.crypto.sx", "dns.aa.net.uk", "doh.42l.fr", "doh.bortzmeyer.fr", "dns.hostux.net", "dns.containerpi.com"
     )
 
     // Critical system domains that must NEVER be blocked
     private val systemAllowlist = setOf(
-        "connectivitycheck.gstatic.com",
-        "connectivitycheck.android.com",
-        "time.android.com",
-        "time.google.com",
-        "clients3.google.com",
-        "fcm.googleapis.com",
-        "fcm.google.com",
-        "mtalk.google.com",
-        "play.googleapis.com",
-        "android.clients.google.com",
-        "play-fe.googleapis.com",
-        "playstoregatewayadapter-pa.googleapis.com"
+        "connectivitycheck.gstatic.com", "connectivitycheck.android.com", "time.android.com", "time.google.com",
+        "clients3.google.com", "fcm.googleapis.com", "fcm.google.com", "mtalk.google.com", "play.googleapis.com",
+        "android.clients.google.com", "play-fe.googleapis.com", "playstoregatewayadapter-pa.googleapis.com"
     )
 
     // --- Block Categories ---
@@ -189,11 +147,6 @@ object AdblockEngine {
     // Public API
     // ==========================================================================
 
-    /**
-     * Initialize the engine. Safe to call multiple times — only the first call
-     * triggers initialization. The Kotlin domain blocker initializes synchronously
-     * and quickly (~200ms); the native Rust engine loads asynchronously.
-     */
     fun init(context: Context) {
         if (!initStarted.compareAndSet(false, true)) return
         state = EngineState.INITIALIZING
@@ -201,39 +154,42 @@ object AdblockEngine {
 
         Thread({
             try {
-                // Step 1: Build/Load fast domain blocker (primary)
                 val startTime = System.currentTimeMillis()
-                val cacheLoaded = loadCache(context)
+                val tempBlocked = HashSet<String>()
+                val tempAllowed = HashSet<String>()
+                
+                val cacheLoaded = loadCache(context, tempBlocked, tempAllowed)
                 if (cacheLoaded) {
+                    blockedDomainHashes = tempBlocked.map { fnv1a64(it) }.toLongArray()
+                    blockedDomainHashes.sort()
+                    allowedDomainHashes = tempAllowed.map { fnv1a64(it) }.toLongArray()
+                    allowedDomainHashes.sort()
+                    
                     domainBlockerReady = true
                     val domainLoadTime = System.currentTimeMillis() - startTime
-                    Log.d(TAG, "Domain blocker ready (loaded from cache) in ${domainLoadTime}ms: ${blockedDomains.size} domains, " +
-                            "${allowedDomains.size} allowlisted, ${dohProviderDomains.size} DoH providers blocked")
+                    Log.d(TAG, "Domain blocker ready (loaded from cache) in ${domainLoadTime}ms: ${blockedDomainHashes.size} domains, " +
+                            "${allowedDomainHashes.size} allowlisted, ${dohProviderDomains.size} DoH providers blocked")
                     state = EngineState.READY
                     observableState.value = EngineState.READY
                     readyLatch.countDown()
                 } else {
-                    // Fallback to parsing raw text lists
-                    loadAllFilters(context)
+                    loadAllFilters(context, tempBlocked, tempAllowed)
                     domainBlockerReady = true
 
-                    // Populate Bloom Filter
-                    bloomFilter.clear()
-                    for (domain in blockedDomains) {
-                        bloomFilter.add(domain)
-                    }
+                    blockedDomainHashes = tempBlocked.map { fnv1a64(it) }.toLongArray()
+                    blockedDomainHashes.sort()
+                    allowedDomainHashes = tempAllowed.map { fnv1a64(it) }.toLongArray()
+                    allowedDomainHashes.sort()
 
                     val domainLoadTime = System.currentTimeMillis() - startTime
-                    Log.d(TAG, "Domain blocker ready (parsed from text) in ${domainLoadTime}ms: ${blockedDomains.size} domains, " +
-                            "${allowedDomains.size} allowlisted, ${dohProviderDomains.size} DoH providers blocked")
+                    Log.d(TAG, "Domain blocker ready (parsed from text) in ${domainLoadTime}ms: ${blockedDomainHashes.size} domains, " +
+                            "${allowedDomainHashes.size} allowlisted, ${dohProviderDomains.size} DoH providers blocked")
                     state = EngineState.READY
                     observableState.value = EngineState.READY
                     readyLatch.countDown()
-                    // Save cache for next run
-                    saveCache(context)
+                    saveCache(context, tempBlocked, tempAllowed)
                 }
 
-                // Step 2: Load native Rust engine asynchronously (secondary, enhanced matching)
                 try {
                     System.loadLibrary("adblock")
                     val filters = loadFilterTexts(context)
@@ -253,36 +209,30 @@ object AdblockEngine {
         }, "adblock-init").start()
     }
 
-    /**
-     * Hot-reload filter lists from storage (called after FilterListUpdater
-     * downloads fresh lists). This replaces the domain blocker contents
-     * without requiring an app restart.
-     */
     fun reloadFilters(context: Context) {
         Log.d(TAG, "Reloading filter lists...")
         val startTime = System.currentTimeMillis()
 
-        // Clear existing data
-        blockedDomains.clear()
-        allowedDomains.clear()
+        blockedDomainHashes = LongArray(0)
+        allowedDomainHashes = LongArray(0)
         loadedRuleCount.set(0)
-        bloomFilter.clear()
 
-        // Reload from storage (or assets as fallback)
-        loadAllFilters(context)
+        val tempBlocked = HashSet<String>()
+        val tempAllowed = HashSet<String>()
+
+        loadAllFilters(context, tempBlocked, tempAllowed)
         
-        // Populate Bloom Filter
-        for (domain in blockedDomains) {
-            bloomFilter.add(domain)
-        }
+        blockedDomainHashes = tempBlocked.map { fnv1a64(it) }.toLongArray()
+        blockedDomainHashes.sort()
+        allowedDomainHashes = tempAllowed.map { fnv1a64(it) }.toLongArray()
+        allowedDomainHashes.sort()
         
-        saveCache(context)
+        saveCache(context, tempBlocked, tempAllowed)
 
         val elapsed = System.currentTimeMillis() - startTime
-        Log.d(TAG, "Filter reload complete in ${elapsed}ms: ${blockedDomains.size} domains, " +
-                "${allowedDomains.size} allowlisted")
+        Log.d(TAG, "Filter reload complete in ${elapsed}ms: ${blockedDomainHashes.size} domains, " +
+                "${allowedDomainHashes.size} allowlisted")
 
-        // Re-init native engine with new lists
         if (nativeReady) {
             try {
                 nativeReady = false
@@ -295,35 +245,12 @@ object AdblockEngine {
         }
     }
 
-    /**
-     * Returns true once at least the domain blocker is ready.
-     */
     fun isReady(): Boolean = state == EngineState.READY
-
-    /**
-     * Returns true if the native Rust engine is operational (secondary layer).
-     */
     fun isNativeReady(): Boolean = nativeReady
-
-    /**
-     * Returns the current engine state.
-     */
     fun getState(): EngineState = state
-
-    /**
-     * Returns number of blocked domains loaded.
-     */
-    fun getLoadedDomainCount(): Int = blockedDomains.size
-
-    /**
-     * Returns total parsed rules count.
-     */
+    fun getLoadedDomainCount(): Int = blockedDomainHashes.size
     fun getLoadedRuleCount(): Int = loadedRuleCount.get()
 
-    /**
-     * Block until the engine is ready, with timeout.
-     * Returns true if engine became ready within the timeout.
-     */
     fun awaitReady(timeoutMs: Long = 5000): Boolean {
         return try {
             readyLatch.await(timeoutMs, TimeUnit.MILLISECONDS)
@@ -332,35 +259,16 @@ object AdblockEngine {
         }
     }
 
-    /**
-     * Check if a domain should be blocked. This is the primary API for DNS-level blocking.
-     *
-     * Checks in order:
-     * 1. System allowlist (never block)
-     * 2. DoH provider domains (always block to prevent DNS bypass)
-     * 3. Filter allowlist (parsed from @@|| rules)
-     * 4. Domain blocker HashSet with subdomain matching
-     * 5. Native Rust engine URL-level check (if available)
-     */
     fun shouldBlock(url: String, sourceUrl: String = "", resourceType: String = "other"): Boolean {
         if (state != EngineState.READY) return false
-
-        // Extract domain from URL
         val domain = extractDomain(url) ?: return false
 
-        // 1. Never block critical system domains
         if (isInDomainSet(domain, systemAllowlist)) return false
-
-        // 2. Always block DoH providers to prevent DNS bypass
         if (isInDomainSet(domain, dohProviderDomains)) return true
+        if (isInDomainSet(domain, allowedDomainHashes)) return false
 
-        // 3. Check allowlist
-        if (isInDomainSet(domain, allowedDomains)) return false
-
-        // 4. Primary: Fast domain blocker
         if (domainBlockerReady && isDomainBlocked(domain)) return true
 
-        // 5. Secondary: Native Rust engine (full URL matching)
         if (nativeReady) {
             return try {
                 nativeMatches(url, sourceUrl, resourceType)
@@ -373,61 +281,38 @@ object AdblockEngine {
         return false
     }
 
-    /**
-     * Check if a bare domain should be blocked (for DNS queries).
-     * Constructs a URL from the domain and delegates to shouldBlock().
-     */
     fun shouldBlockDomain(domain: String, packageName: String = ""): Boolean {
         val lower = domain.lowercase()
         val inSystem = isInDomainSet(lower, systemAllowlist)
         val inDoh = isInDomainSet(lower, dohProviderDomains)
-        val inAllowed = isInDomainSet(lower, allowedDomains)
+        val inAllowed = isInDomainSet(lower, allowedDomainHashes)
         val inBlocked = isDomainBlocked(lower)
         Log.d(TAG, "Checking domain: $lower -> system=$inSystem, doh=$inDoh, allowed=$inAllowed, blocked=$inBlocked")
 
-        // 1. Never block critical system domains
         if (inSystem) return false
-
-        // 2. Always block DoH providers
         if (inDoh) return true
-
-        // 3. Check allowlist
         if (inAllowed) return false
-
-        // 4. Primary: Fast domain blocker
         if (domainBlockerReady && inBlocked) return true
 
-        // 5. Secondary: Native Rust engine
         if (nativeReady) {
             return try {
                 val urlToCheck = "http://$lower/"
-                // Pass a dummy source URL with the requesting package name as domain
                 val sourceUrl = if (packageName.isNotEmpty()) "http://$packageName/" else "http://lykon-shield-context.org/"
                 nativeMatches(urlToCheck, sourceUrl, "document") ||
                         nativeMatches(urlToCheck, sourceUrl, "script") ||
                         nativeMatches(urlToCheck, sourceUrl, "image") ||
-                        nativeMatches(urlToCheck, sourceUrl, "xmlhttprequest")
+                        nativeMatches(urlToCheck, sourceUrl, "xmlhttprequest") ||
+                        nativeMatches(urlToCheck, sourceUrl, "subdocument") ||
+                        nativeMatches(urlToCheck, sourceUrl, "other")
             } catch (e: Exception) {
                 false
             }
         }
-
         return false
     }
 
-    /**
-     * Hook for future IP-based ad blocking. Currently returns false as
-     * IP-level blocking risks false positives on shared CDN infrastructure.
-     */
-    fun shouldBlockIpDirect(ip: String): Boolean {
-        // Reserved for future use — when we have a curated list of
-        // dedicated ad-serving IPs that are NOT shared CDNs.
-        return false
-    }
+    fun shouldBlockIpDirect(ip: String): Boolean = false
 
-    /**
-     * Classify a blocked domain into a category.
-     */
     fun categorize(domain: String): BlockCategory {
         val lower = domain.lowercase()
         return when {
@@ -438,181 +323,119 @@ object AdblockEngine {
         }
     }
 
-    /**
-     * Returns true if the given domain is a known DoH/DoT provider.
-     */
-    fun isDoHProvider(domain: String): Boolean {
-        return isInDomainSet(domain, dohProviderDomains)
-    }
+    fun isDoHProvider(domain: String): Boolean = isInDomainSet(domain, dohProviderDomains)
 
     // ==========================================================================
     // Filter Loading Implementation
     // ==========================================================================
 
-    /**
-     * Load all filter lists — checks internal storage first (for updated lists
-     * downloaded by FilterListUpdater), then falls back to bundled assets.
-     */
-    private fun loadAllFilters(context: Context) {
+    private fun loadAllFilters(context: Context, blocked: MutableSet<String>, allowed: MutableSet<String>) {
         val allFiles = FILTER_FILES + EXTRA_FILTER_FILES
-
         for (file in allFiles) {
             try {
                 val storageFile = File(context.filesDir, "$FILTERS_DIR/$file")
                 if (storageFile.exists() && storageFile.length() > 0) {
-                    // Load from internal storage (updated list)
                     Log.d(TAG, "Loading filter from storage: $file (${storageFile.length()} bytes)")
-                    storageFile.bufferedReader().use { reader ->
-                        parseFilterLines(reader)
-                    }
+                    storageFile.bufferedReader().use { reader -> parseFilterLines(reader, blocked, allowed) }
                 } else if (file in FILTER_FILES) {
-                    // Fall back to bundled assets (only for the 3 core lists)
                     Log.d(TAG, "Loading filter from assets: $file")
-                    context.assets.open(file).use { input ->
-                        parseFilterLines(input.bufferedReader())
-                    }
+                    context.assets.open(file).use { input -> parseFilterLines(input.bufferedReader(), blocked, allowed) }
                 }
-                // Extra files (peter-lowe, oisd) are only loaded if downloaded
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to parse filter list: $file", e)
             }
         }
     }
 
-    /**
-     * Load raw filter text for the native Rust engine. Returns a list of
-     * complete filter list contents as strings.
-     */
     private fun loadFilterTexts(context: Context): List<String> {
         val allFiles = FILTER_FILES + EXTRA_FILTER_FILES
         val filters = mutableListOf<String>()
-
         for (file in allFiles) {
             try {
                 val storageFile = File(context.filesDir, "$FILTERS_DIR/$file")
                 if (storageFile.exists() && storageFile.length() > 0) {
                     filters.add(storageFile.readText())
                 } else if (file in FILTER_FILES) {
-                    context.assets.open(file).use { input ->
-                        filters.add(input.bufferedReader().readText())
-                    }
+                    context.assets.open(file).use { input -> filters.add(input.bufferedReader().readText()) }
                 }
             } catch (e: Exception) {
                 Log.e(TAG, "Failed to read filter text: $file", e)
             }
         }
-
         return filters
     }
 
-    /**
-     * Parse filter lines from a reader, extracting domain-only rules
-     * into the fast HashSet. Mirrors the parsing logic from Arcade-Lykon
-     * browser FilterManager._parseFilterList().
-     */
-    private fun parseFilterLines(reader: BufferedReader) {
+    private fun parseFilterLines(reader: BufferedReader, blocked: MutableSet<String>, allowed: MutableSet<String>) {
         reader.forEachLine { rawLine ->
             val line = rawLine.trim()
             if (line.isEmpty()) return@forEachLine
-
             loadedRuleCount.incrementAndGet()
-
-            // Skip comments, metadata, cosmetic rules
-            if (line.startsWith("!") ||
-                line.startsWith("[") ||
-                line.contains("##") ||
-                line.contains("#@#") ||
-                line.contains("#?#") ||
-                line.contains("#\$#")) {
-                return@forEachLine
-            }
-
-            // Check for allowlist rules (@@||domain^)
+            if (line.startsWith("!") || line.startsWith("[") || line.contains("##") || line.contains("#@#") || line.contains("#?#") || line.contains("#$#")) return@forEachLine
             val isAllowlist = line.startsWith("@@")
             val ruleLine = if (isAllowlist) line.substring(2) else line
-
-            // Check if there are options after $
             val dollarIdx = ruleLine.lastIndexOf('$')
-            val options = if (dollarIdx != -1 && !ruleLine.contains("\$/")) {
-                ruleLine.substring(dollarIdx + 1)
-            } else {
-                ""
-            }
-
-            // Filter out rules with options we cannot evaluate at the DNS level.
-            // Complex rules are skipped here and evaluated with full context in the native Rust engine.
+            val options = if (dollarIdx != -1 && !ruleLine.contains("$/")) ruleLine.substring(dollarIdx + 1) else ""
             if (options.isNotEmpty()) {
                 val optList = options.lowercase().split(",")
-                if (optList.any { 
-                        it.contains("generichide") || it.contains("elemhide") || 
-                        it.contains("document") || it.contains("genericblock") || 
-                        it.contains("badfilter") || it.contains("popup") ||
-                        it.contains("domain=")
-                    }) {
-                    return@forEachLine
-                }
+                if (optList.any { it.contains("generichide") || it.contains("elemhide") || it.contains("document") || it.contains("genericblock") || it.contains("badfilter") || it.contains("popup") || it.contains("domain=") }) return@forEachLine
             }
-
-            val effectiveLine = if (dollarIdx != -1 && !ruleLine.contains("\$/")) {
-                ruleLine.substring(0, dollarIdx)
-            } else {
-                ruleLine
-            }
-
+            val effectiveLine = if (dollarIdx != -1 && !ruleLine.contains("$/")) ruleLine.substring(0, dollarIdx) else ruleLine
             if (effectiveLine.isEmpty()) return@forEachLine
-
-            // Extract domain from ||domain^ pattern
-            if (effectiveLine.startsWith("||") &&
-                effectiveLine.endsWith("^") &&
-                !effectiveLine.contains("*") &&
-                !effectiveLine.contains("/")) {
-
-                val domain = effectiveLine.substring(2, effectiveLine.length - 1)
-                if (domain.isNotEmpty() && domain.contains(".")) {
-                    if (isAllowlist) {
-                        allowedDomains.add(domain.lowercase())
-                    } else {
-                        blockedDomains.add(domain.lowercase())
+            if (effectiveLine.startsWith("||")) {
+                var domain = effectiveLine.substring(2)
+                if (domain.endsWith("^")) {
+                    domain = domain.substring(0, domain.length - 1)
+                }
+                if (domain.isNotEmpty() && !domain.contains("*") && !domain.contains("/")) {
+                    val cleanDomain = domain.lowercase().trim()
+                    if (cleanDomain.contains(".")) {
+                        if (isAllowlist) allowed.add(cleanDomain) else blocked.add(cleanDomain)
                     }
                 }
             }
-
-            // Also handle hosts-file format: "0.0.0.0 domain" or "127.0.0.1 domain"
-            if (!isAllowlist && (line.startsWith("0.0.0.0 ") || line.startsWith("127.0.0.1 "))) {
-                val domain = line.substringAfter(" ").trim()
-                if (domain.isNotEmpty() && domain.contains(".") && !domain.startsWith("#")) {
-                    blockedDomains.add(domain.lowercase())
+            if (!isAllowlist) {
+                val isHosts = line.startsWith("0.0.0.0") || line.startsWith("127.0.0.1")
+                if (isHosts) {
+                    val parts = line.split(Regex("\\s+"))
+                    if (parts.size >= 2) {
+                        val domain = parts[1].trim()
+                        if (domain.isNotEmpty() && domain.contains(".") && !domain.startsWith("#")) {
+                            blocked.add(domain.lowercase())
+                        }
+                    }
                 }
             }
         }
     }
 
-    /**
-     * Check if a domain matches any entry in the blocked domains set,
-     * including subdomain matching. Mirrors FilterManager.matches():
-     *
-     * For domain "sub.ads.example.com", checks:
-     *   sub.ads.example.com → ads.example.com → example.com
-     */
     private fun isDomainBlocked(domain: String): Boolean {
         var current = domain.lowercase()
         while (current.isNotEmpty()) {
-            // Bloom filter pre-check to speed up and verify
-            if (bloomFilter.contains(current)) {
-                // Secondary check: confirm in HashSet to avoid false positives
-                if (blockedDomains.contains(current)) return true
-            }
+            val hash = fnv1a64(current)
+            if (java.util.Arrays.binarySearch(blockedDomainHashes, hash) >= 0) return true
             val dotIndex = current.indexOf('.')
             if (dotIndex == -1) break
             current = current.substring(dotIndex + 1)
-            if (!current.contains('.')) break // Don't check TLD alone
+            if (!current.contains('.')) break
         }
         return false
     }
 
-    /**
-     * Check if a domain matches any entry in a domain set (with subdomain matching).
-     */
+    private fun isInDomainSet(domain: String, hashes: LongArray): Boolean {
+        var current = domain.lowercase()
+        val hash = fnv1a64(current)
+        if (java.util.Arrays.binarySearch(hashes, hash) >= 0) return true
+        while (true) {
+            val dotIndex = current.indexOf('.')
+            if (dotIndex == -1) break
+            current = current.substring(dotIndex + 1)
+            if (!current.contains('.')) break
+            val subHash = fnv1a64(current)
+            if (java.util.Arrays.binarySearch(hashes, subHash) >= 0) return true
+        }
+        return false
+    }
+
     private fun isInDomainSet(domain: String, domainSet: Set<String>): Boolean {
         var current = domain.lowercase()
         if (domainSet.contains(current)) return true
@@ -626,18 +449,12 @@ object AdblockEngine {
         return false
     }
 
-    /**
-     * Extract domain from a URL string.
-     */
     private fun extractDomain(url: String): String? {
         return try {
             val withScheme = if (url.contains("://")) url else "http://$url"
             java.net.URI(withScheme).host?.lowercase()
         } catch (e: Exception) {
-            // Fallback: try simple extraction
-            val stripped = url
-                .removePrefix("http://")
-                .removePrefix("https://")
+            val stripped = url.removePrefix("http://").removePrefix("https://")
             val slashIdx = stripped.indexOf('/')
             val hostPart = if (slashIdx > 0) stripped.substring(0, slashIdx) else stripped
             val colonIdx = hostPart.indexOf(':')
@@ -646,98 +463,54 @@ object AdblockEngine {
         }
     }
 
-    private fun saveCache(context: Context) {
+    private fun fnv1a64(str: String): Long {
+        var hash = -3750763034362895579L
+        for (i in 0 until str.length) {
+            hash = hash xor (str[i].code.toLong() and 0xffL)
+            hash *= 1099511628211L
+        }
+        return hash
+    }
+
+    private fun saveCache(context: Context, blocked: Set<String>, allowed: Set<String>) {
         try {
-            val cacheFile = java.io.File(context.filesDir, "filters.cache")
+            val cacheFile = File(context.filesDir, "filters.cache")
             cacheFile.bufferedWriter().use { writer ->
-                writer.write("1\n") // Cache version code
-                writer.write("${blockedDomains.size}\n")
-                blockedDomains.forEach { writer.write("$it\n") }
-                writer.write("${allowedDomains.size}\n")
-                allowedDomains.forEach { writer.write("$it\n") }
+                writer.write("1\n")
+                writer.write("${blocked.size}\n")
+                blocked.forEach { writer.write("$it\n") }
+                writer.write("${allowed.size}\n")
+                allowed.forEach { writer.write("$it\n") }
             }
-            Log.d(TAG, "Saved filters cache: ${cacheFile.length()} bytes")
         } catch (e: Exception) {
             Log.e(TAG, "Failed to save filters cache", e)
         }
     }
 
-    private fun loadCache(context: Context): Boolean {
+    private fun loadCache(context: Context, blocked: MutableSet<String>, allowed: MutableSet<String>): Boolean {
         try {
-            val cacheFile = java.io.File(context.filesDir, "filters.cache")
+            val cacheFile = File(context.filesDir, "filters.cache")
             if (!cacheFile.exists() || cacheFile.length() == 0L) return false
-
-            // Invalidate cache if older than last app update (e.g. assets updated)
             try {
                 val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
                 if (cacheFile.lastModified() < packageInfo.lastUpdateTime) {
-                    Log.d(TAG, "Cache file is older than last app update, invalidating.")
                     cacheFile.delete()
                     return false
                 }
-            } catch (e: Exception) {
-                Log.w(TAG, "Failed to check package update time", e)
-            }
+            } catch (e: Exception) { Log.w(TAG, "Failed to check package update time", e) }
 
-            val lines = cacheFile.readLines()
-            if (lines.size < 3) return false
-
-            val version = lines[0].trim().toIntOrNull() ?: return false
-            if (version != 1) return false
-
-            val blockedSize = lines[1].trim().toIntOrNull() ?: return false
-            if (lines.size < 2 + blockedSize + 1) return false
-            val blocked = lines.subList(2, 2 + blockedSize)
-
-            val allowedSize = lines[2 + blockedSize].trim().toIntOrNull() ?: return false
-            if (lines.size < 3 + blockedSize + allowedSize) return false
-            val allowed = lines.subList(3 + blockedSize, 3 + blockedSize + allowedSize)
-
-            blockedDomains.clear()
-            blockedDomains.addAll(blocked)
-
-            allowedDomains.clear()
-            allowedDomains.addAll(allowed)
-
-            // Populate Bloom Filter
-            bloomFilter.clear()
-            for (domain in blocked) {
-                bloomFilter.add(domain)
+            cacheFile.bufferedReader().use { reader ->
+                val versionLine = reader.readLine() ?: return false
+                if (versionLine.trim().toIntOrNull() != 1) return false
+                val blockedSize = reader.readLine()?.trim()?.toIntOrNull() ?: return false
+                for (i in 0 until blockedSize) blocked.add(reader.readLine() ?: "")
+                val allowedSize = reader.readLine()?.trim()?.toIntOrNull() ?: return false
+                for (i in 0 until allowedSize) allowed.add(reader.readLine() ?: "")
             }
             return true
         } catch (e: Exception) {
             Log.w(TAG, "Failed to load filters cache - falling back to text lists", e)
             return false
-        }
-    }
-
-    class BloomFilter(private val numBits: Int, private val numHashFunctions: Int) {
-        private val bitSet = BitSet(numBits)
-
-        fun add(element: String) {
-            val h1 = element.hashCode()
-            val h2 = h1 xor (h1 ushr 16)
-            for (i in 0 until numHashFunctions) {
-                val hash = h1 + i * h2
-                bitSet.set(Math.abs(hash % numBits))
-            }
-        }
-
-        fun contains(element: String): Boolean {
-            val h1 = element.hashCode()
-            val h2 = h1 xor (h1 ushr 16)
-            for (i in 0 until numHashFunctions) {
-                val hash = h1 + i * h2
-                val index = Math.abs(hash % numBits)
-                if (!bitSet.get(index)) {
-                    return false
-                }
-            }
-            return true
-        }
-
-        fun clear() {
-            bitSet.clear()
         }
     }
 

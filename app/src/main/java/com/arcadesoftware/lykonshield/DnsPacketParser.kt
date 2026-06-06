@@ -64,11 +64,7 @@ object DnsPacketParser {
         if (packet.remaining() < 4) return 0
         val qtype = packet.short.toInt() and 0xFFFF
 
-        return when (qtype) {
-            DNS_TYPE_A -> DNS_TYPE_A
-            DNS_TYPE_AAAA -> DNS_TYPE_AAAA
-            else -> 0
-        }
+        return qtype
     }
 
     // Builds a DNS A record response returning 0.0.0.0 for the queried domain.
