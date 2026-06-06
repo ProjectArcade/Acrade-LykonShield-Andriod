@@ -489,42 +489,27 @@ fun IosDeveloperDetailsDialog(
                     .background(if (isLightTheme) Color.Black.copy(0.08f) else Color.White.copy(0.1f))
             )
 
-            val details = listOf(
-                "DEVELOPER" to "Abhinav Thakur",
-                "ORGANIZATION" to "ProjectArcade",
-                "DESCRIPTION" to "Lykon Shield is open-source and dedicated to privacy-first community utility."
-            )
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
+                verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
-                details.forEachIndexed { index, pair ->
-                    if (index > 0) {
-                        Box(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .height(0.5.dp)
-                                .background(if (isLightTheme) Color.Black.copy(0.06f) else Color.White.copy(0.08f))
-                        )
-                    }
-                    Column(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 12.dp, horizontal = 4.dp),
-                        verticalArrangement = Arrangement.spacedBy(2.dp)
-                    ) {
-                        Text(
-                            text = pair.first,
-                            color = Color.Gray,
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold
-                        )
-                        Text(
-                            text = pair.second,
-                            color = textColor,
-                            fontSize = 14.sp
-                        )
-                    }
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = "DEVELOPER", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Abhinav Thakur", color = textColor, fontSize = 15.sp)
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = "ORGANIZATION", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "ProjectArcade", color = textColor, fontSize = 15.sp)
+                }
+
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(text = "DESCRIPTION", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        text = "Lykon Shield is open-source and dedicated to privacy-first community utility.",
+                        color = textColor,
+                        fontSize = 14.sp
+                    )
                 }
             }
 

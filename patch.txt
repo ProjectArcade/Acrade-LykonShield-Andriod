@@ -1,0 +1,197 @@
+--- app/src/main/java/com/arcadesoftware/lykonshield/SettingsScreen.kt
++++ app/src/main/java/com/arcadesoftware/lykonshield/SettingsScreen.kt
+@@ -438,48 +438,55 @@
+     val systemBlue = if (isLightTheme) Color(0xFF007AFF) else Color(0xFF0A84FF)
+ 
+-    IosBaseDialogCard(
+-        backdrop = backdrop
+-    ) {
+-        Column(
+-            modifier = Modifier
+-                .fillMaxWidth()
+-                .padding(20.dp),
+-            verticalArrangement = Arrangement.spacedBy(16.dp)
+-        ) {
+-            Row(
+-                modifier = Modifier.fillMaxWidth(),
+-                horizontalArrangement = Arrangement.SpaceBetween,
+-                verticalAlignment = Alignment.CenterVertically
+-            ) {
+-                Column(verticalArrangement = Arrangement.spacedBy(1.dp), modifier = Modifier.weight(1f)) {
+-                    Text(
+-                        text = "Developer Details",
+-                        color = textColor,
+-                        fontSize = 18.sp,
+-                        fontWeight = FontWeight.Bold
+-                    )
+-                    Text(
+-                        text = "About the developer",
+-                        color = Color.Gray,
+-                        fontSize = 11.sp
+-                    )
+-                }
+-
+-                Box(
+-                    modifier = Modifier
+-                        .size(28.dp)
+-                        .clip(CircleShape)
+-                        .background(if (isLightTheme) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.1f))
+-                        .clickable { onDismiss() },
+-                    contentAlignment = Alignment.Center
+-                ) {
+-                    Text(
+-                        text = "✕",
+-                        color = textColor.copy(alpha = 0.6f),
+-                        fontSize = 11.sp,
+-                        fontWeight = FontWeight.Bold
+-                    )
+-                }
+-            }
++    Box(
++        modifier = Modifier
++            .fillMaxSize()
++            .background(Color.Black.copy(alpha = 0.4f))
++            .clickable(enabled = true) { onDismiss() }, 
++        contentAlignment = Alignment.Center
++    ) {
++        IosBaseDialogCard(
++            backdrop = backdrop
++        ) {
++            Column(
++                modifier = Modifier
++                    .fillMaxWidth()
++                    .clickable(enabled = true) {}
++                    .padding(20.dp),
++                verticalArrangement = Arrangement.spacedBy(16.dp)
++            ) {
++                Row(
++                    modifier = Modifier.fillMaxWidth(),
++                    horizontalArrangement = Arrangement.SpaceBetween,
++                    verticalAlignment = Alignment.CenterVertically
++                ) {
++                    Column(verticalArrangement = Arrangement.spacedBy(1.dp), modifier = Modifier.weight(1f)) {
++                        Text(
++                            text = "Developer Details",
++                            color = textColor,
++                            fontSize = 18.sp,
++                            fontWeight = FontWeight.Bold
++                        )
++                        Text(
++                            text = "About the developer",
++                            color = Color.Gray,
++                            fontSize = 11.sp
++                        )
++                    }
++
++                    Box(
++                        modifier = Modifier
++                            .size(28.dp)
++                            .clip(CircleShape)
++                            .background(if (isLightTheme) Color.Black.copy(alpha = 0.05f) else Color.White.copy(alpha = 0.1f))
++                            .clickable { onDismiss() },
++                        contentAlignment = Alignment.Center
++                    ) {
++                        androidx.compose.material3.Icon(
++                            imageVector = androidx.compose.material.icons.Icons.Default.Close,
++                            contentDescription = "Close",
++                            tint = if (isLightTheme) Color.Gray else Color.LightGray,
++                            modifier = Modifier.size(16.dp)
++                        )
++                    }
++                }
+ 
+-            Box(
+-                modifier = Modifier
+@@ -487,27 +494,27 @@
+ 
+-            Column(
+-                modifier = Modifier.fillMaxWidth(),
+-                verticalArrangement = Arrangement.spacedBy(12.dp)
+-            ) {
+-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+-                    Text(text = "DEVELOPER", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+-                    Text(text = "Abhinav Thakur", color = textColor, fontSize = 15.sp)
+-                }
+-
+-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+-                    Text(text = "ORGANIZATION", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+-                    Text(text = "ProjectArcade", color = textColor, fontSize = 15.sp)
+-                }
+-
+-                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+-                    Text(text = "DESCRIPTION", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
+-                    Text(
+-                        text = "Lykon Shield is open-source and dedicated to privacy-first community utility.",
+-                        color = textColor,
+-                        fontSize = 14.sp
+-                    )
+-                }
+-            }
+-
+-            Box(
+-                modifier = Modifier
++                Column(
++                    modifier = Modifier.fillMaxWidth(),
++                    verticalArrangement = Arrangement.spacedBy(12.dp)
++                ) {
++                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
++                        Text(text = "DEVELOPER", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
++                        Text(text = "Abhinav Thakur", color = textColor, fontSize = 15.sp)
++                    }
++
++                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
++                        Text(text = "ORGANIZATION", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
++                        Text(text = "ProjectArcade", color = textColor, fontSize = 15.sp)
++                    }
++
++                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
++                        Text(text = "DESCRIPTION", color = Color.Gray, fontSize = 11.sp, fontWeight = FontWeight.Bold)
++                        Text(
++                            text = "Lykon Shield is open-source and dedicated to privacy-first community utility.",
++                            color = textColor,
++                            fontSize = 14.sp
++                        )
++                    }
++                }
++
++                Box(
++                    modifier = Modifier
+@@ -515,19 +522,20 @@
+ 
+-            Box(
+-                modifier = Modifier
+-                    .fillMaxWidth()
+-                    .clip(RoundedCornerShape(12.dp))
+-                    .background(systemBlue)
+-                    .clickable { onDismiss() }
+-                    .padding(vertical = 11.dp),
+-                contentAlignment = Alignment.Center
+-            ) {
+-                Text(
+-                    text = "Close",
+-                    color = Color.White,
+-                    fontSize = 14.sp,
+-                    fontWeight = FontWeight.Bold
+-                )
+-            }
+-        }
++                Box(
++                    modifier = Modifier
++                        .fillMaxWidth()
++                        .clip(RoundedCornerShape(12.dp))
++                        .background(systemBlue)
++                        .clickable { onDismiss() }
++                        .padding(vertical = 11.dp),
++                    contentAlignment = Alignment.Center
++                ) {
++                    Text(
++                        text = "Close",
++                        color = Color.White,
++                        fontSize = 14.sp,
++                        fontWeight = FontWeight.Bold
++                    )
++                }
++            }
++        }
++    }
+ }

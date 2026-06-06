@@ -15,7 +15,7 @@ android {
         applicationId = "com.arcadesoftware.lykonshield"
         minSdk = 24
         targetSdk = 36
-        versionCode = 1
+        versionCode = 2
         versionName = "1.0.9"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"

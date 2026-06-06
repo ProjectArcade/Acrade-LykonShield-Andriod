@@ -908,7 +908,7 @@ fun ProtectionLevelCard(
                                 Text(
                                     text = label,
                                     fontSize = 11.sp,
-                                    color = if (isEnhancedSelected) Color(0xFFFFFFFF) else if (isSelected) sliderColor else Color.Gray,
+                                    color = if (isEnhancedSelected) Color(0xFF008F27) else if (isSelected) sliderColor else Color.Gray,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
                             }

@@ -78,9 +78,15 @@ class MainActivity : ComponentActivity() {
             val initialHighlightCaptures = remember { prefs.getBoolean("highlight_captures_enabled", false) }
             val initialForceSystemBlur = remember { prefs.getBoolean("force_system_blur_enabled", true) }
             val initialRenderCacheSize = remember { prefs.getInt("render_cache_size", 512) }
+            val initialWidgetPromptShown = remember { prefs.getBoolean("widget_prompt_shown_v4", false) }
+
+            var requiresHardUpdate by remember { mutableStateOf(false) }
+            var requiresSoftUpdate by remember { mutableStateOf(false) }
+            var showSoftUpdateDialog by remember { mutableStateOf(false) }
 
             var themeMode by remember { mutableIntStateOf(initialThemeMode) }
             var showThemeDialog by rememberSaveable { mutableStateOf(false) }
+            var showWidgetPrompt by rememberSaveable { mutableStateOf(!initialWidgetPromptShown) }
             var isLiquidGlassEnabled by remember { mutableStateOf(initialLiquidGlass) }
             var isAdvancedNetworkStatsEnabled by remember { mutableStateOf(initialAdvancedStats) }
             var backdropBlurRadius by remember { mutableStateOf(initialBackdropBlurRadius) }
@@ -88,6 +94,27 @@ class MainActivity : ComponentActivity() {
             var isHighlightCapturesEnabled by remember { mutableStateOf(initialHighlightCaptures) }
             var isForceSystemBlurEnabled by remember { mutableStateOf(initialForceSystemBlur) }
             var renderCacheSize by remember { mutableStateOf(initialRenderCacheSize) }
+
+            LaunchedEffect(Unit) {
+                val currentVersionCode = BuildConfig.VERSION_CODE
+                AppConfigManager.checkRemoteConfig(this@MainActivity, currentVersionCode)
+                requiresHardUpdate = AppConfigManager.requiresHardUpdate
+                requiresSoftUpdate = AppConfigManager.requiresSoftUpdate
+                if (requiresSoftUpdate) {
+                    showSoftUpdateDialog = true
+                }
+                
+                if (requiresHardUpdate) {
+                    // Turn off protection if hard update is required
+                    prefs.edit().putBoolean("protection_enabled", false).apply()
+                    if (LykonVpnService.isVpnActive) {
+                        val intent = Intent(this@MainActivity, LykonVpnService::class.java).apply {
+                            action = LykonVpnService.ACTION_STOP
+                        }
+                        this@MainActivity.startService(intent)
+                    }
+                }
+            }
 
             LaunchedEffect(themeMode) {
                 prefs.edit().putInt("theme_mode", themeMode).apply()
@@ -113,6 +140,15 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(renderCacheSize) {
                 prefs.edit().putInt("render_cache_size", renderCacheSize).apply()
             }
+
+            LaunchedEffect(showWidgetPrompt) {
+                if (!showWidgetPrompt && !initialWidgetPromptShown) {
+                    prefs.edit().putBoolean("widget_prompt_shown_v4", true).apply()
+                }
+            }
+
+            val appWidgetManager = remember { android.appwidget.AppWidgetManager.getInstance(applicationContext) }
+            val myProvider = remember { android.content.ComponentName(applicationContext, ShieldWidgetProvider::class.java) }
 
             val isDark = when (themeMode) {
                 1 -> false
@@ -477,6 +513,56 @@ class MainActivity : ComponentActivity() {
                                 backdrop = rememberCombinedBackdrop(backdrop, dialogBackdrop)
                             )
                         }
+                    }
+
+                    if (showWidgetPrompt) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Black.copy(alpha = 0.4f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth(0.85f)
+                                    .clickable(enabled = false) {}
+                            ) {
+                                IosWidgetPromptDialog(
+                                    onDismiss = { showWidgetPrompt = false },
+                                    onAddWidget = {
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                            if (appWidgetManager.isRequestPinAppWidgetSupported) {
+                                                appWidgetManager.requestPinAppWidget(myProvider, null, null)
+                                            } else {
+                                                android.widget.Toast.makeText(applicationContext, "Please add the widget from your launcher", android.widget.Toast.LENGTH_LONG).show()
+                                            }
+                                        } else {
+                                            android.widget.Toast.makeText(applicationContext, "Please add the widget from your launcher", android.widget.Toast.LENGTH_LONG).show()
+                                        }
+                                    },
+                                    backdrop = rememberCombinedBackdrop(backdrop, dialogBackdrop)
+                                )
+                            }
+                        }
+                    }
+
+                    if (requiresHardUpdate) {
+                        val activity = (androidx.compose.ui.platform.LocalContext.current as? android.app.Activity)
+                        UpdateBlockDialog(
+                            updateUrl = AppConfigManager.updateUrl,
+                            updateMessage = AppConfigManager.updateMessage,
+                            isHardUpdate = true,
+                            onDismiss = { activity?.finishAffinity() },
+                            backdrop = backdrop
+                        )
+                    } else if (showSoftUpdateDialog) {
+                        UpdateBlockDialog(
+                            updateUrl = AppConfigManager.updateUrl,
+                            updateMessage = AppConfigManager.updateMessage,
+                            isHardUpdate = false,
+                            onDismiss = { showSoftUpdateDialog = false },
+                            backdrop = backdrop
+                        )
                     }
                 }
             }
