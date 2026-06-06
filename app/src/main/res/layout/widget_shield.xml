@@ -1,0 +1,125 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/widget_root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_background_ios"
+    android:padding="8dp"
+    android:gravity="center_vertical">
+
+    <!-- Pie Chart Area -->
+    <RelativeLayout
+        android:layout_width="65dp"
+        android:layout_height="65dp"
+        android:layout_marginEnd="12dp"
+        android:layout_marginStart="4dp">
+
+        <ImageView
+            android:id="@+id/widget_pie_chart"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <TextView
+                android:id="@+id/widget_total_count"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="0"
+                android:textColor="#FFFFFF"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                android:fontFamily="sans-serif-medium" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Total"
+                android:textColor="#8E8E93"
+                android:textSize="8sp"
+                android:fontFamily="sans-serif"
+                android:layout_marginTop="-2dp" />
+        </LinearLayout>
+    </RelativeLayout>
+
+    <!-- Legend List -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/widget_empty_text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="No blocks yet"
+            android:textColor="#8E8E93"
+            android:textSize="12sp"
+            android:gravity="center"
+            android:visibility="gone" />
+
+        <!-- Left Column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical"
+            android:layout_marginEnd="4dp">
+
+            <!-- Row 0 -->
+            <LinearLayout android:id="@+id/row_0" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="1dp" android:paddingBottom="1dp" android:visibility="gone">
+                <ImageView android:id="@+id/row_0_dot" android:layout_width="6dp" android:layout_height="6dp" android:layout_marginEnd="6dp" />
+                <TextView android:id="@+id/row_0_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:singleLine="true" android:ellipsize="end" />
+                <TextView android:id="@+id/row_0_percent" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:layout_marginEnd="4dp" />
+                <TextView android:id="@+id/row_0_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#8E8E93" android:textSize="9sp" android:fontFamily="sans-serif" />
+            </LinearLayout>
+
+            <!-- Row 1 -->
+            <LinearLayout android:id="@+id/row_1" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="1dp" android:paddingBottom="1dp" android:visibility="gone">
+                <ImageView android:id="@+id/row_1_dot" android:layout_width="6dp" android:layout_height="6dp" android:layout_marginEnd="6dp" />
+                <TextView android:id="@+id/row_1_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:singleLine="true" android:ellipsize="end" />
+                <TextView android:id="@+id/row_1_percent" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:layout_marginEnd="4dp" />
+                <TextView android:id="@+id/row_1_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#8E8E93" android:textSize="9sp" android:fontFamily="sans-serif" />
+            </LinearLayout>
+
+            <!-- Row 2 -->
+            <LinearLayout android:id="@+id/row_2" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="1dp" android:paddingBottom="1dp" android:visibility="gone">
+                <ImageView android:id="@+id/row_2_dot" android:layout_width="6dp" android:layout_height="6dp" android:layout_marginEnd="6dp" />
+                <TextView android:id="@+id/row_2_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:singleLine="true" android:ellipsize="end" />
+                <TextView android:id="@+id/row_2_percent" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:layout_marginEnd="4dp" />
+                <TextView android:id="@+id/row_2_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#8E8E93" android:textSize="9sp" android:fontFamily="sans-serif" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- Right Column -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <!-- Row 3 -->
+            <LinearLayout android:id="@+id/row_3" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="1dp" android:paddingBottom="1dp" android:visibility="gone">
+                <ImageView android:id="@+id/row_3_dot" android:layout_width="6dp" android:layout_height="6dp" android:layout_marginEnd="6dp" />
+                <TextView android:id="@+id/row_3_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:singleLine="true" android:ellipsize="end" />
+                <TextView android:id="@+id/row_3_percent" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:layout_marginEnd="4dp" />
+                <TextView android:id="@+id/row_3_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#8E8E93" android:textSize="9sp" android:fontFamily="sans-serif" />
+            </LinearLayout>
+
+            <!-- Row 4 -->
+            <LinearLayout android:id="@+id/row_4" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal" android:gravity="center_vertical" android:paddingTop="1dp" android:paddingBottom="1dp" android:visibility="gone">
+                <ImageView android:id="@+id/row_4_dot" android:layout_width="6dp" android:layout_height="6dp" android:layout_marginEnd="6dp" />
+                <TextView android:id="@+id/row_4_name" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:singleLine="true" android:ellipsize="end" />
+                <TextView android:id="@+id/row_4_percent" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#FFFFFF" android:textSize="11sp" android:textStyle="bold" android:fontFamily="sans-serif-medium" android:layout_marginEnd="4dp" />
+                <TextView android:id="@+id/row_4_count" android:layout_width="wrap_content" android:layout_height="wrap_content" android:textColor="#8E8E93" android:textSize="9sp" android:fontFamily="sans-serif" />
+            </LinearLayout>
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

@@ -70,6 +70,10 @@ class LykonVpnService : VpnService() {
             "2620:119:35::35", "2620:119:53::53",             // OpenDNS
             "2a10:50c0::ad1:ff", "2a10:50c0::ad2:ff"          // AdGuard
         )
+        
+        @Volatile
+        var isVpnActive = false
+            private set
     }
 
     private var vpnInterface: ParcelFileDescriptor? = null
@@ -170,11 +174,24 @@ class LykonVpnService : VpnService() {
             if (vpnInterface == null) {
                 Log.e(TAG, "Failed to establish VPN interface")
                 isRunning = false
+                isVpnActive = false
                 return
             }
 
+            isVpnActive = true
             vpnThread = Thread({ runVpnLoop() }, "LykonVPN-Loop")
             vpnThread?.start()
+            
+            try {
+                android.service.quicksettings.TileService.requestListeningState(this, android.content.ComponentName(this, ShieldTileService::class.java))
+                val appWidgetManager = android.appwidget.AppWidgetManager.getInstance(this)
+                val componentName = android.content.ComponentName(this, ShieldWidgetProvider::class.java)
+                val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+                val intent = android.content.Intent(this, ShieldWidgetProvider::class.java)
+                intent.action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                intent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+                sendBroadcast(intent)
+            } catch(e: Exception) {}
 
             Log.d(TAG, "Lykon Shield VPN established — selective routing active")
         } catch (e: Exception) {
@@ -187,6 +204,7 @@ class LykonVpnService : VpnService() {
     private fun stopVpn() {
         if (!isRunning) return
         isRunning = false
+        isVpnActive = false
         Log.d(TAG, "Stopping Lykon Shield VPN...")
 
         vpnInterface?.close()
@@ -194,12 +212,32 @@ class LykonVpnService : VpnService() {
         vpnThread?.interrupt()
         vpnThread = null
 
+        ShieldStatsManager.forcePersist(this)
+
+        try {
+            android.service.quicksettings.TileService.requestListeningState(this, android.content.ComponentName(this, ShieldTileService::class.java))
+        } catch (e: Exception) {
+            // Ignore
+        }
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
             @Suppress("DEPRECATION")
             stopForeground(true)
         }
+        
+        try {
+            android.service.quicksettings.TileService.requestListeningState(this, android.content.ComponentName(this, ShieldTileService::class.java))
+            val appWidgetManager = android.appwidget.AppWidgetManager.getInstance(this)
+            val componentName = android.content.ComponentName(this, ShieldWidgetProvider::class.java)
+            val appWidgetIds = appWidgetManager.getAppWidgetIds(componentName)
+            val intent = android.content.Intent(this, ShieldWidgetProvider::class.java)
+            intent.action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            intent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, appWidgetIds)
+            sendBroadcast(intent)
+        } catch(e: Exception) {}
+        
         stopSelf()
     }
 

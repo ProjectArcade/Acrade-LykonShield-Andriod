@@ -25,8 +25,8 @@ object ShieldStatsManager {
     private const val KEY_DAILY_BLOCKS = "daily_blocks"
     private const val KEY_CATEGORY_BLOCKS = "category_blocks"
 
-    /** Number of blocks between SharedPreferences flushes. */
-    private const val PERSIST_INTERVAL = 50
+    /** Minimum milliseconds between SharedPreferences flushes and Widget updates. */
+    private const val PERSIST_DEBOUNCE_MS = 3000L
 
     /** Average bytes saved per blocked DNS request (typical small ad/tracker resource). */
     private const val AVG_BYTES_SAVED_PER_BLOCK = 15 * 1024L
@@ -45,7 +45,13 @@ object ShieldStatsManager {
 
     private val mainHandler = Handler(Looper.getMainLooper())
     private var prefs: SharedPreferences? = null
-    private var unsavedBlockCount = 0
+    private var saveTaskPending = false
+    private var lastContext: Context? = null
+    
+    private val saveRunnable = Runnable {
+        saveTaskPending = false
+        lastContext?.let { performPersist(it) }
+    }
 
     // ── Block category classification ────────────────────────────────────────
 
@@ -279,35 +285,53 @@ object ShieldStatsManager {
         }
     }
 
-    private fun persistIfNeeded() {
-        unsavedBlockCount++
-        if (unsavedBlockCount >= PERSIST_INTERVAL) {
-            unsavedBlockCount = 0
-            prefs?.edit()?.apply {
-                putInt(KEY_TOTAL_BLOCKED_TRACKERS, totalBlockedTrackers)
-                putInt(KEY_TOTAL_ADS_BLOCKED, totalAdsBlocked)
-                putLong(KEY_TOTAL_DATA_SAVED_BYTES, totalDataSavedBytes)
-
-                val appBlockString = appBlockCounts.entries.joinToString(",") { "${it.key}:${it.value}" }
-                putString(KEY_APP_BLOCK_COUNTS, appBlockString)
-
-                val domainBlockString = domainBlockCounts.entries.joinToString(",") { "${it.key}:${it.value}" }
-                putString(KEY_DOMAIN_BLOCK_COUNTS, domainBlockString)
-
-                val recentString = recentBlocks.take(30).joinToString("\n") { 
-                    "${it.domain}|${it.packageName}|${it.appName}|${it.category.name}|${it.timestamp}" 
-                }
-                putString(KEY_RECENT_BLOCKS, recentString)
-
-                val dailyString = dailyBlockHistory.entries.joinToString(",") { "${it.key}:${it.value}" }
-                putString(KEY_DAILY_BLOCKS, dailyString)
-
-                val categoryString = categoryBlockCounts.entries.joinToString(",") { "${it.key}:${it.value}" }
-                putString(KEY_CATEGORY_BLOCKS, categoryString)
-
-                apply()
-            }
+    private fun persistIfNeeded(context: Context) {
+        lastContext = context.applicationContext
+        if (!saveTaskPending) {
+            saveTaskPending = true
+            mainHandler.postDelayed(saveRunnable, PERSIST_DEBOUNCE_MS)
         }
+    }
+
+    fun forcePersist(context: Context) {
+        mainHandler.removeCallbacks(saveRunnable)
+        saveTaskPending = false
+        performPersist(context)
+    }
+
+    private fun performPersist(context: Context) {
+        prefs?.edit()?.apply {
+            putInt(KEY_TOTAL_BLOCKED_TRACKERS, totalBlockedTrackers)
+            putInt(KEY_TOTAL_ADS_BLOCKED, totalAdsBlocked)
+            putLong(KEY_TOTAL_DATA_SAVED_BYTES, totalDataSavedBytes)
+
+            val appBlockString = appBlockCounts.entries.joinToString(",") { "${it.key}:${it.value}" }
+            putString(KEY_APP_BLOCK_COUNTS, appBlockString)
+
+            val domainBlockString = domainBlockCounts.entries.joinToString(",") { "${it.key}:${it.value}" }
+            putString(KEY_DOMAIN_BLOCK_COUNTS, domainBlockString)
+
+            val recentString = recentBlocks.take(30).joinToString("\n") { 
+                "${it.domain}|${it.packageName}|${it.appName}|${it.category.name}|${it.timestamp}" 
+            }
+            putString(KEY_RECENT_BLOCKS, recentString)
+
+            val dailyString = dailyBlockHistory.entries.joinToString(",") { "${it.key}:${it.value}" }
+            putString(KEY_DAILY_BLOCKS, dailyString)
+
+            val categoryString = categoryBlockCounts.entries.joinToString(",") { "${it.key}:${it.value}" }
+            putString(KEY_CATEGORY_BLOCKS, categoryString)
+
+            apply()
+        }
+
+        val intent = android.content.Intent(context, ShieldWidgetProvider::class.java).apply {
+            action = android.appwidget.AppWidgetManager.ACTION_APPWIDGET_UPDATE
+        }
+        val ids = android.appwidget.AppWidgetManager.getInstance(context)
+            .getAppWidgetIds(android.content.ComponentName(context, ShieldWidgetProvider::class.java))
+        intent.putExtra(android.appwidget.AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+        context.sendBroadcast(intent)
     }
 
     // ── Recording blocks ─────────────────────────────────────────────────────
@@ -402,7 +426,7 @@ object ShieldStatsManager {
             }
 
             // ── Persistence ──────────────────────────────────────────────
-            persistIfNeeded()
+            persistIfNeeded(context)
         }
 
         Log.d(TAG, "Recorded block [$category]: $domain from $appName ($packageName)")

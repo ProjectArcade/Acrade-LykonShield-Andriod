@@ -40,10 +40,17 @@ class ShieldTileService : TileService() {
         val tile = qsTile ?: return
         val prefs = getSharedPreferences("lykon_shield_prefs", Context.MODE_PRIVATE)
         val isEnabled = prefs.getBoolean("protection_enabled", false)
+        val isActive = LykonVpnService.isVpnActive
 
-        tile.state = if (isEnabled) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+        if (!isEnabled) {
+            tile.state = Tile.STATE_INACTIVE
+            tile.label = "Lykon Shield"
+        } else {
+            tile.state = if (isActive) Tile.STATE_ACTIVE else Tile.STATE_INACTIVE
+            tile.label = "Lykon Shield"
+        }
+        
         tile.icon = Icon.createWithResource(this, R.drawable.dark_icon)
-        tile.label = "Lykon Shield"
         tile.updateTile()
     }
 }

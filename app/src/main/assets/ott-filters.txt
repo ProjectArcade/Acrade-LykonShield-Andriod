@@ -139,6 +139,13 @@
 ||crashdump.spotify.com^
 ||adstats.spotify.com^
 ||ads.spotify.com^
+||video-fa.scdn.co^
+||video.scdn.co^
+||video-akpcw.spotifycdn.com^
+||aet.spotify.com^
+||audio-fa.scdn.co^
+||audio-ak-spotify-com.akamaized.net^
+||audio-sp-shv-08-lhr9.spotify.com^
 
 ! --- SAX programmatic pipeline (Google/DV360 side) ---
 ||pubads.g.doubleclick.net^$domain=spotify.com

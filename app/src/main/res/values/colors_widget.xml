@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Light theme glassy blur colors -->
+    <color name="widget_bg_blur">#D9F2F2F7</color> <!-- 85% opacity light gray/white -->
+    <color name="widget_text_primary">#000000</color>
+    <color name="widget_text_secondary">#8E8E93</color>
+    <color name="widget_divider_color">#1A000000</color>
+</resources>
