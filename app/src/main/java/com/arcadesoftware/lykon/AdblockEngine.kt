@@ -377,7 +377,7 @@ object AdblockEngine {
      * Check if a bare domain should be blocked (for DNS queries).
      * Constructs a URL from the domain and delegates to shouldBlock().
      */
-    fun shouldBlockDomain(domain: String): Boolean {
+    fun shouldBlockDomain(domain: String, packageName: String = ""): Boolean {
         val lower = domain.lowercase()
         val inSystem = isInDomainSet(lower, systemAllowlist)
         val inDoh = isInDomainSet(lower, dohProviderDomains)
@@ -400,9 +400,9 @@ object AdblockEngine {
         // 5. Secondary: Native Rust engine
         if (nativeReady) {
             return try {
-                val urlToCheck = "http://$domain/"
-                // Pass a dummy third-party source URL so third-party options on rules match correctly
-                val sourceUrl = "http://lykon-shield-context.org/"
+                val urlToCheck = "http://$lower/"
+                // Pass a dummy source URL with the requesting package name as domain
+                val sourceUrl = if (packageName.isNotEmpty()) "http://$packageName/" else "http://lykon-shield-context.org/"
                 nativeMatches(urlToCheck, sourceUrl, "document") ||
                         nativeMatches(urlToCheck, sourceUrl, "script") ||
                         nativeMatches(urlToCheck, sourceUrl, "image") ||

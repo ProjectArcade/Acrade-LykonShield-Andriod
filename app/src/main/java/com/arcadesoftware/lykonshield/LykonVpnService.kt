@@ -290,7 +290,7 @@ class LykonVpnService : VpnService() {
 
         val packageName = getAppPackageForConnection(srcPort, destIpStr, PROTO_UDP) ?: "system"
 
-        val shouldBlock = AdblockEngine.shouldBlockDomain(domain)
+        val shouldBlock = AdblockEngine.shouldBlockDomain(domain, packageName)
         Log.d(TAG, "DNS Query from $packageName: $domain -> shouldBlock = $shouldBlock")
 
         if (shouldBlock) {

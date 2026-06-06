@@ -103,6 +103,15 @@
 ||amazon-adsystem.com^
 ||advertising.amazon.dev^
 
+! --- Amazon Media CDN (blocked only for MX Player to prevent ad images/creatives, safe for Amazon Shopping) ---
+||m.media-amazon.com^$domain=com.mxtech.videoplayer.ad
+
+! --- Facebook Graph API / Audience Network (blocked only for MX Player to prevent ads) ---
+||graph.facebook.com^$domain=com.mxtech.videoplayer.ad
+
+! --- CloudFront ad CDN (blocked only for MX Player) ---
+||d1zu029dxvk9kf.cloudfront.net^$domain=com.mxtech.videoplayer.ad
+
 !===========================================================
 ! SPOTIFY
 ! Source: MarshMeadow/Block-Spotify-ADS-DNS-List,
@@ -363,6 +372,18 @@
 ||doubleclick.net^$third-party
 ||googlesyndication.com^$third-party
 ||2mdn.net^
+
+! --- Mobile Ad Mediation SDKs ---
+||applovin.com^
+||applvn.com^
+||vungle.com^
+||digitalturbine.com^
+||dtignite.com^
+
+! --- Facebook Audience Network & Ad Gateway ---
+||an.facebook.com^
+||b-graph.facebook.com^
+||z-m-gateway.facebook.com^
 
 !===========================================================
 ! ⚠ WHITELIST RECOMMENDATIONS (add these as exceptions)

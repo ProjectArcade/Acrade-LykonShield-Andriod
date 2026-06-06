@@ -903,6 +903,8 @@ fun CategoryPieChart(
             "TRACKER" to Color(0xFFFF9500),
             "ANALYTICS" to Color(0xFF007AFF),
             "MALWARE" to Color(0xFFAF52DE),
+            "TELEMETRY" to Color(0xFF30D5C8),
+            "SOCIAL" to Color(0xFFFF2D55),
             "OTHER" to Color(0xFF34C759)
         )
     }
@@ -979,6 +981,8 @@ fun CategoryPieChart(
                         "TRACKER" -> "Trackers"
                         "ANALYTICS" -> "Analytics"
                         "MALWARE" -> "Malware"
+                        "TELEMETRY" -> "Telemetry"
+                        "SOCIAL" -> "Social"
                         else -> "Other"
                     }
 
@@ -1096,6 +1100,8 @@ fun AppDetailPopupContent(
             ShieldStatsManager.BlockCategory.TRACKER to Color(0xFFFF9500),
             ShieldStatsManager.BlockCategory.ANALYTICS to Color(0xFF007AFF),
             ShieldStatsManager.BlockCategory.MALWARE to Color(0xFFAF52DE),
+            ShieldStatsManager.BlockCategory.TELEMETRY to Color(0xFF30D5C8),
+            ShieldStatsManager.BlockCategory.SOCIAL to Color(0xFFFF2D55),
             ShieldStatsManager.BlockCategory.OTHER to Color(0xFF34C759)
         )
     }
@@ -1311,6 +1317,8 @@ fun AppDetailPopupContent(
                             ShieldStatsManager.BlockCategory.TRACKER -> "Trackers"
                             ShieldStatsManager.BlockCategory.ANALYTICS -> "Analytics"
                             ShieldStatsManager.BlockCategory.MALWARE -> "Malware"
+                            ShieldStatsManager.BlockCategory.TELEMETRY -> "Telemetry"
+                            ShieldStatsManager.BlockCategory.SOCIAL -> "Social"
                             else -> "Other"
                         }
 

@@ -50,24 +50,40 @@ object ShieldStatsManager {
     // ── Block category classification ────────────────────────────────────────
 
     enum class BlockCategory {
-        AD, TRACKER, ANALYTICS, MALWARE, OTHER
+        AD, TRACKER, ANALYTICS, MALWARE, TELEMETRY, SOCIAL, OTHER
     }
 
     private val AD_KEYWORDS = listOf(
         "doubleclick", "googlesyndication", "adservice", "adnxs", "adsystem",
         "adform", "admob", "pubads", "pagead", "taboola", "outbrain",
-        "popads", "adtech", "adserver"
+        "popads", "adtech", "adserver", "adsrvr", "adroll", "advertising",
+        "moatads", "serving-sys", "criteo", "rubiconproject", "openx",
+        "bidswitch", "smartadserver", "appnexus", "mediavine",
+        "inmobi", "unityads", "applovin", "ironsource", "chartboost",
+        "vungle", "mopub", "startapp", "fyber", "ads.", "ad-", "-ad-"
     )
 
     private val TRACKER_KEYWORDS = listOf(
-        "tracker", "tracking", "telemetry", "pixel", "beacon", "metrics",
-        "scorecardresearch", "hotjar", "clarity.ms", "mixpanel",
-        "segment.io", "amplitude"
+        "tracker", "tracking", "pixel", "beacon", "scorecardresearch",
+        "hotjar", "clarity.ms", "mixpanel", "segment.io", "segment.com",
+        "amplitude", "appsflyer", "adjust.com", "branch.io", "kochava",
+        "singular.net", "appsflyersdk"
     )
 
     private val ANALYTICS_KEYWORDS = listOf(
         "google-analytics", "googletagmanager", "analytics",
-        "stats.", "statcounter"
+        "stats.", "statcounter", "newrelic", "flurry", "omtrdc", "demdex"
+    )
+
+    private val TELEMETRY_KEYWORDS = listOf(
+        "telemetry", "metrics", "log", "logs", "event", "events", "cdp",
+        "conviva", "cws-", "touchstone", "bifrost", "sntx", "sigma", "crash",
+        "bugsnag", "sentry", "crashlytics"
+    )
+
+    private val SOCIAL_KEYWORDS = listOf(
+        "facebook", "instagram", "twitter", "tiktok", "linkedin", "snapchat",
+        "fbcdn", "graph.facebook"
     )
 
     /**
@@ -80,6 +96,8 @@ object ShieldStatsManager {
             AD_KEYWORDS.any { lower.contains(it) } -> BlockCategory.AD
             TRACKER_KEYWORDS.any { lower.contains(it) } -> BlockCategory.TRACKER
             ANALYTICS_KEYWORDS.any { lower.contains(it) } -> BlockCategory.ANALYTICS
+            TELEMETRY_KEYWORDS.any { lower.contains(it) } -> BlockCategory.TELEMETRY
+            SOCIAL_KEYWORDS.any { lower.contains(it) } || lower == "t.co" || lower.endsWith(".t.co") -> BlockCategory.SOCIAL
             else -> BlockCategory.OTHER
         }
     }
