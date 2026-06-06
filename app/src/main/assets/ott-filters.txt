@@ -392,16 +392,17 @@
 ! content — blocking will break playback or login.
 ! Add as: @@||domain.com^
 !===========================================================
-! @@||api.hotstar.com^
-! @@||player.hotstar.com^
-! @@||hss.hotstar.com^
-! @@||auth.hotstar.com^
-! @@||spclient.wg.spotify.com^     ! Spotify client API — breaks playback if blocked
-! @@||audio-ec.spotify.com^        ! Spotify audio delivery
-! @@||audio2.spotify.com^          ! Spotify audio delivery
-! @@||service.hotstar.com^         ! Hotstar content API
-! @@||services.hotstar.com^        ! Hotstar content API
-! @@||vs.hotstar.com^              ! Hotstar video streaming
+@@||api.hotstar.com^
+@@||player.hotstar.com^
+@@||hss.hotstar.com^
+@@||auth.hotstar.com^
+@@||spclient.wg.spotify.com^
+@@||apresolve.spotify.com^
+@@||audio-ec.spotify.com^
+@@||audio2.spotify.com^
+@@||service.hotstar.com^
+@@||services.hotstar.com^
+@@||vs.hotstar.com^
 
 
 
