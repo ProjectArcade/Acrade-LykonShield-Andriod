@@ -49,6 +49,7 @@ import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
+import com.kyant.backdrop.catalog.components.LiquidBottomTab
 import com.arcadesoftware.lykon.AdblockEngine
 import android.net.VpnService
 import android.content.Intent

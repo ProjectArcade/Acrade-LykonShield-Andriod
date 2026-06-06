@@ -38,6 +38,7 @@ import com.kyant.backdrop.Backdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import com.kyant.backdrop.backdrops.rememberCombinedBackdrop
 import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.catalog.components.LiquidBottomTab
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -45,6 +46,8 @@ import androidx.compose.ui.graphics.vector.path
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.activity.compose.BackHandler
 import kotlin.math.abs
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectTapGestures
 
 data class AppBlockInfo(
     val packageName: String,
@@ -203,7 +206,7 @@ fun BlockedScreen(
                                 height = 44.dp,
                                 modifier = Modifier.fillMaxWidth()
                             ) {
-                                listOf("Real-time", "Daily", "Categories").forEachIndexed { index, label ->
+                                listOf("Categories", "Daily", "Real-time").forEachIndexed { index, label ->
                                     LiquidBottomTab(onClick = { selectedGraphTab = index }) {
                                         val isSelected = selectedGraphTab == index
                                         val iconColor = if (isSelected) {
@@ -212,9 +215,9 @@ fun BlockedScreen(
                                             if (isLightTheme) Color.DarkGray.copy(alpha = 0.6f) else Color.LightGray.copy(alpha = 0.6f)
                                         }
                                         val icon = when (index) {
-                                            0 -> if (isSelected) RealTimeFilledIcon else RealTimeIcon
+                                            0 -> if (isSelected) CategoriesFilledIcon else CategoriesIcon
                                             1 -> if (isSelected) DailyFilledIcon else DailyIcon
-                                            else -> if (isSelected) CategoriesFilledIcon else CategoriesIcon
+                                            else -> if (isSelected) RealTimeFilledIcon else RealTimeIcon
                                         }
                                         Icon(
                                             imageVector = icon,
@@ -235,20 +238,18 @@ fun BlockedScreen(
                             // Active graph content showing only real data
                             when (selectedGraphTab) {
                                 0 -> {
-                                    val historyPoints = ShieldStatsManager.hourlyBlockHistory.toList()
-                                    if (historyPoints.isNotEmpty()) {
-                                        LiquidGlassGraph(
-                                            history = historyPoints,
-                                            modifier = Modifier.fillMaxWidth().height(120.dp),
-                                            lineColor = Color(0xFFFF3B30),
-                                            fillColor = Color(0xFFFF3B30).copy(alpha = 0.15f)
+                                    val categoryCounts = ShieldStatsManager.categoryBlockCounts.toMap()
+                                    if (categoryCounts.values.any { it > 0 }) {
+                                        CategoryPieChart(
+                                            categoryCounts = categoryCounts,
+                                            isLightTheme = isLightTheme
                                         )
                                     } else {
                                         Box(
                                             modifier = Modifier.fillMaxWidth().height(120.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text("Waiting for network activity...", color = Color.Gray, fontSize = 13.sp)
+                                            Text("No category classification logs yet.", color = Color.Gray, fontSize = 13.sp)
                                         }
                                     }
                                 }
@@ -269,18 +270,20 @@ fun BlockedScreen(
                                     }
                                 }
                                 2 -> {
-                                    val categoryCounts = ShieldStatsManager.categoryBlockCounts.toMap()
-                                    if (categoryCounts.values.any { it > 0 }) {
-                                        CategoryPieChart(
-                                            categoryCounts = categoryCounts,
-                                            isLightTheme = isLightTheme
+                                    val historyPoints = ShieldStatsManager.hourlyBlockHistory.toList()
+                                    if (historyPoints.isNotEmpty()) {
+                                        LiquidGlassGraph(
+                                            history = historyPoints,
+                                            modifier = Modifier.fillMaxWidth().height(120.dp),
+                                            lineColor = Color(0xFFFF3B30),
+                                            fillColor = Color(0xFFFF3B30).copy(alpha = 0.15f)
                                         )
                                     } else {
                                         Box(
                                             modifier = Modifier.fillMaxWidth().height(120.dp),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Text("No category classification logs yet.", color = Color.Gray, fontSize = 13.sp)
+                                            Text("Waiting for network activity...", color = Color.Gray, fontSize = 13.sp)
                                         }
                                     }
                                 }
@@ -889,6 +892,9 @@ fun CategoryPieChart(
     modifier: Modifier = Modifier,
     isLightTheme: Boolean
 ) {
+    val context = LocalContext.current
+    var selectedCategory by remember { mutableStateOf<String?>(null) }
+    
     val total = remember(categoryCounts) {
         categoryCounts.values.sum().coerceAtLeast(1)
     }
@@ -896,6 +902,8 @@ fun CategoryPieChart(
     val categories = remember(categoryCounts) {
         categoryCounts.entries.sortedByDescending { it.value }
     }
+
+    val activeCategory = selectedCategory ?: categories.firstOrNull()?.key?.uppercase()
 
     val categoryColors = remember {
         mapOf(
@@ -905,11 +913,47 @@ fun CategoryPieChart(
             "MALWARE" to Color(0xFFAF52DE),
             "TELEMETRY" to Color(0xFF30D5C8),
             "SOCIAL" to Color(0xFFFF2D55),
+            "OTT" to Color(0xFF00C7BE),
+            "DOH" to Color(0xFF5856D6),
+            "MINER" to Color(0xFF8E8E93),
+            "SPAM" to Color(0xFFBF5AF2),
             "OTHER" to Color(0xFF34C759)
         )
     }
 
     val contentColor = if (isLightTheme) Color.Black else Color.White
+
+    var topApps by remember { mutableStateOf<List<Triple<String, Drawable?, Int>>>(emptyList()) }
+
+    LaunchedEffect(selectedCategory, ShieldStatsManager.recentBlocks.size) {
+        val cat = selectedCategory
+        if (cat != null) {
+            val categoryEnum = try {
+                ShieldStatsManager.BlockCategory.valueOf(cat)
+            } catch (_: Exception) {
+                ShieldStatsManager.BlockCategory.OTHER
+            }
+            withContext(Dispatchers.IO) {
+                val filtered = ShieldStatsManager.recentBlocks.filter { it.category == categoryEnum }
+                val calculated = filtered.groupBy { it.packageName }
+                    .map { (packageName, entries) ->
+                        val appName = entries.firstOrNull()?.appName ?: packageName
+                        var icon: android.graphics.drawable.Drawable? = null
+                        try {
+                            icon = context.packageManager.getApplicationIcon(packageName)
+                        } catch (_: Exception) {}
+                        Triple(appName, icon, entries.size)
+                    }
+                    .sortedByDescending { it.third }
+                    .take(3)
+                withContext(Dispatchers.Main) {
+                    topApps = calculated
+                }
+            }
+        } else {
+            topApps = emptyList()
+        }
+    }
 
     Column(
         modifier = modifier
@@ -922,8 +966,43 @@ fun CategoryPieChart(
             horizontalArrangement = Arrangement.spacedBy(24.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            val sizePx = with(density) { 110.dp.toPx() }
+            val center = Offset(sizePx / 2f, sizePx / 2f)
+
             Box(
-                modifier = Modifier.size(110.dp),
+                modifier = Modifier
+                    .size(110.dp)
+                    .pointerInput(categories, total) {
+                        detectTapGestures { offset ->
+                            val dx = offset.x - center.x
+                            val dy = offset.y - center.y
+                            val dist = Math.sqrt((dx * dx + dy * dy).toDouble())
+                            if (dist <= sizePx / 2f) {
+                                var angle = Math.toDegrees(Math.atan2(dy.toDouble(), dx.toDouble())).toFloat()
+                                if (angle < 0) angle += 360f
+                                
+                                var adjustedAngle = angle - 270f
+                                if (adjustedAngle < 0) adjustedAngle += 360f
+                                
+                                var currentStart = 0f
+                                var clickedCategory: String? = null
+                                for (entry in categories) {
+                                    val sweep = (entry.value.toFloat() / total) * 360f
+                                    if (adjustedAngle >= currentStart && adjustedAngle < currentStart + sweep) {
+                                        clickedCategory = entry.key
+                                        break
+                                    }
+                                    currentStart += sweep
+                                }
+                                
+                                if (clickedCategory != null) {
+                                    val catUpper = clickedCategory.uppercase()
+                                    selectedCategory = if (selectedCategory == catUpper) null else catUpper
+                                }
+                            }
+                        }
+                    },
                 contentAlignment = Alignment.Center
             ) {
                 Canvas(modifier = Modifier.size(100.dp)) {
@@ -973,7 +1052,13 @@ fun CategoryPieChart(
                 modifier = Modifier.weight(1f),
                 verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-                categories.take(5).forEach { entry ->
+                val filteredCategories = if (selectedCategory != null) {
+                    categories.filter { it.key.uppercase() == selectedCategory }
+                } else {
+                    categories.take(5)
+                }
+
+                filteredCategories.forEach { entry ->
                     val color = categoryColors[entry.key.uppercase()] ?: Color.Gray
                     val percentage = (entry.value.toFloat() / total * 100).toInt()
                     val label = when (entry.key.uppercase()) {
@@ -983,17 +1068,27 @@ fun CategoryPieChart(
                         "MALWARE" -> "Malware"
                         "TELEMETRY" -> "Telemetry"
                         "SOCIAL" -> "Social"
+                        "OTT" -> "OTT Media"
+                        "DOH" -> "Secure DNS"
+                        "MINER" -> "Cryptominers"
+                        "SPAM" -> "Spam/Phish"
                         else -> "Other"
                     }
 
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                val catUpper = entry.key.uppercase()
+                                selectedCategory = if (selectedCategory == catUpper) null else catUpper
+                            },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                            modifier = Modifier.weight(1f).padding(end = 8.dp)
                         ) {
                             Box(
                                 modifier = Modifier
@@ -1004,25 +1099,123 @@ fun CategoryPieChart(
                             Text(
                                 text = label,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
-                                color = contentColor
-                            )
-                        }
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "$percentage%",
-                                fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = contentColor
                             )
+                            if (selectedCategory == entry.key.uppercase()) {
+                                Text(
+                                    text = " ✕",
+                                    fontSize = 10.sp,
+                                    color = Color.Gray,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        if (selectedCategory == entry.key.uppercase()) {
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(color.copy(alpha = 0.12f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = "${entry.value}",
+                                    color = color,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        } else {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = "$percentage%",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = contentColor
+                                )
+                                Text(
+                                    text = "(${entry.value})",
+                                    fontSize = 10.sp,
+                                    color = Color.Gray
+                                )
+                            }
+                        }
+                    }
+
+                    if (selectedCategory == entry.key.uppercase()) {
+
+                        if (topApps.isEmpty()) {
                             Text(
-                                text = "(${entry.value})",
-                                fontSize = 10.sp,
-                                color = Color.Gray
+                                text = "No apps recorded yet.",
+                                fontSize = 11.sp,
+                                color = Color.Gray,
+                                modifier = Modifier.padding(start = 14.dp, top = 4.dp)
                             )
+                        } else {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 14.dp, top = 4.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                topApps.forEach { (appName, icon, count) ->
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                            modifier = Modifier.weight(1f).padding(end = 8.dp)
+                                        ) {
+                                            if (icon != null) {
+                                                AppIconImage(drawable = icon, modifier = Modifier.size(20.dp))
+                                            } else {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(20.dp)
+                                                        .clip(RoundedCornerShape(4.dp))
+                                                        .background(if (isLightTheme) Color.Black.copy(0.08f) else Color.White.copy(0.12f)),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = appName.take(1),
+                                                        color = contentColor.copy(0.6f),
+                                                        fontSize = 10.sp,
+                                                        fontWeight = FontWeight.Bold
+                                                    )
+                                                }
+                                            }
+                                            Text(
+                                                text = appName,
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Medium,
+                                                color = contentColor,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                        Box(
+                                            modifier = Modifier
+                                                .clip(RoundedCornerShape(6.dp))
+                                                .background(Color(0xFFFF3B30).copy(alpha = 0.12f))
+                                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                                        ) {
+                                            Text(
+                                                text = "$count",
+                                                color = Color(0xFFFF3B30),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -1102,6 +1295,10 @@ fun AppDetailPopupContent(
             ShieldStatsManager.BlockCategory.MALWARE to Color(0xFFAF52DE),
             ShieldStatsManager.BlockCategory.TELEMETRY to Color(0xFF30D5C8),
             ShieldStatsManager.BlockCategory.SOCIAL to Color(0xFFFF2D55),
+            ShieldStatsManager.BlockCategory.OTT to Color(0xFF00C7BE),
+            ShieldStatsManager.BlockCategory.DOH to Color(0xFF5856D6),
+            ShieldStatsManager.BlockCategory.MINER to Color(0xFF8E8E93),
+            ShieldStatsManager.BlockCategory.SPAM to Color(0xFFBF5AF2),
             ShieldStatsManager.BlockCategory.OTHER to Color(0xFF34C759)
         )
     }
@@ -1319,6 +1516,10 @@ fun AppDetailPopupContent(
                             ShieldStatsManager.BlockCategory.MALWARE -> "Malware"
                             ShieldStatsManager.BlockCategory.TELEMETRY -> "Telemetry"
                             ShieldStatsManager.BlockCategory.SOCIAL -> "Social"
+                            ShieldStatsManager.BlockCategory.OTT -> "OTT Media"
+                            ShieldStatsManager.BlockCategory.DOH -> "Secure DNS"
+                            ShieldStatsManager.BlockCategory.MINER -> "Cryptominers"
+                            ShieldStatsManager.BlockCategory.SPAM -> "Spam/Phish"
                             else -> "Other"
                         }
 
@@ -1399,15 +1600,62 @@ fun AppDetailPopupContent(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = domain,
-                            color = contentColor,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Medium,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
+                        val cat = ShieldStatsManager.categorize(domain)
+                        val catColor = when (cat) {
+                            ShieldStatsManager.BlockCategory.AD -> Color(0xFFFF3B30)
+                            ShieldStatsManager.BlockCategory.TRACKER -> Color(0xFFFF9500)
+                            ShieldStatsManager.BlockCategory.ANALYTICS -> Color(0xFF007AFF)
+                            ShieldStatsManager.BlockCategory.MALWARE -> Color(0xFFAF52DE)
+                            ShieldStatsManager.BlockCategory.TELEMETRY -> Color(0xFF30D5C8)
+                            ShieldStatsManager.BlockCategory.SOCIAL -> Color(0xFFFF2D55)
+                            ShieldStatsManager.BlockCategory.OTT -> Color(0xFF00C7BE)
+                            ShieldStatsManager.BlockCategory.DOH -> Color(0xFF5856D6)
+                            ShieldStatsManager.BlockCategory.MINER -> Color(0xFF8E8E93)
+                            ShieldStatsManager.BlockCategory.SPAM -> Color(0xFFBF5AF2)
+                            else -> Color(0xFF34C759)
+                        }
+                        val catLabel = when (cat) {
+                            ShieldStatsManager.BlockCategory.AD -> "Ad"
+                            ShieldStatsManager.BlockCategory.TRACKER -> "Tracker"
+                            ShieldStatsManager.BlockCategory.ANALYTICS -> "Analytics"
+                            ShieldStatsManager.BlockCategory.MALWARE -> "Malware"
+                            ShieldStatsManager.BlockCategory.TELEMETRY -> "Telemetry"
+                            ShieldStatsManager.BlockCategory.SOCIAL -> "Social"
+                            ShieldStatsManager.BlockCategory.OTT -> "OTT"
+                            ShieldStatsManager.BlockCategory.DOH -> "DoH"
+                            ShieldStatsManager.BlockCategory.MINER -> "Miner"
+                            ShieldStatsManager.BlockCategory.SPAM -> "Spam"
+                            else -> "Other"
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             modifier = Modifier.weight(1f).padding(end = 8.dp)
-                        )
+                        ) {
+                            Text(
+                                text = domain,
+                                color = contentColor,
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Medium,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false)
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(catColor.copy(alpha = 0.12f))
+                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                            ) {
+                                Text(
+                                    text = catLabel,
+                                    color = catColor,
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
@@ -1461,10 +1709,14 @@ val RealTimeIcon: ImageVector
         strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
         strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
     ) {
-        moveTo(3f, 16f)
-        lineTo(9f, 10f)
-        lineTo(14f, 14f)
-        lineTo(21f, 6f)
+        moveTo(2f, 12f)
+        lineTo(6f, 12f)
+        lineTo(9f, 7f)
+        lineTo(12f, 17f)
+        lineTo(15f, 10f)
+        lineTo(17f, 13f)
+        lineTo(19f, 12f)
+        lineTo(22f, 12f)
     }.build()
 
 val RealTimeFilledIcon: ImageVector
@@ -1474,30 +1726,20 @@ val RealTimeFilledIcon: ImageVector
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f
-    ).apply {
-        path(
-            stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
-            strokeLineWidth = 2.5f,
-            strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
-            strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
-        ) {
-            moveTo(3f, 16f)
-            lineTo(9f, 10f)
-            lineTo(14f, 14f)
-            lineTo(21f, 6f)
-        }
-        path(
-            fill = androidx.compose.ui.graphics.SolidColor(Color.Black),
-            fillAlpha = 0.25f
-        ) {
-            moveTo(3f, 16f)
-            lineTo(9f, 10f)
-            lineTo(14f, 14f)
-            lineTo(21f, 6f)
-            lineTo(21f, 20f)
-            lineTo(3f, 20f)
-            close()
-        }
+    ).path(
+        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+        strokeLineWidth = 3f,
+        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+    ) {
+        moveTo(2f, 12f)
+        lineTo(6f, 12f)
+        lineTo(9f, 7f)
+        lineTo(12f, 17f)
+        lineTo(15f, 10f)
+        lineTo(17f, 13f)
+        lineTo(19f, 12f)
+        lineTo(22f, 12f)
     }.build()
 
 val DailyIcon: ImageVector
@@ -1507,29 +1749,19 @@ val DailyIcon: ImageVector
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f
-    ).path(
-        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
-        strokeLineWidth = 2f,
-        strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
-        strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
-    ) {
-        // Bar 1
-        moveTo(4f, 20f)
-        lineTo(4f, 12f)
-        lineTo(8f, 12f)
-        lineTo(8f, 20f)
-        
-        // Bar 2
-        moveTo(10f, 20f)
-        lineTo(10f, 6f)
-        lineTo(14f, 6f)
-        lineTo(14f, 20f)
-        
-        // Bar 3
-        moveTo(16f, 20f)
-        lineTo(16f, 10f)
-        lineTo(20f, 10f)
-        lineTo(20f, 20f)
+    ).apply {
+        path(
+            stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+            strokeLineWidth = 2f,
+            strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round
+        ) {
+            moveTo(6f, 20f)
+            lineTo(6f, 13f)
+            moveTo(12f, 20f)
+            lineTo(12f, 7f)
+            moveTo(18f, 20f)
+            lineTo(18f, 11f)
+        }
     }.build()
 
 val DailyFilledIcon: ImageVector
@@ -1539,35 +1771,19 @@ val DailyFilledIcon: ImageVector
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f
-    ).path(
-        fill = androidx.compose.ui.graphics.SolidColor(Color.Black)
-    ) {
-        // Bar 1
-        moveTo(4f, 11f)
-        curveTo(4f, 10.5f, 4.5f, 10f, 5f, 10f)
-        horizontalLineTo(7f)
-        curveTo(7.5f, 10f, 8f, 10.5f, 8f, 11f)
-        verticalLineTo(20f)
-        horizontalLineTo(4f)
-        close()
-        
-        // Bar 2
-        moveTo(10f, 5f)
-        curveTo(10f, 4.5f, 10.5f, 4f, 11f, 4f)
-        horizontalLineTo(13f)
-        curveTo(13.5f, 4f, 14f, 4.5f, 14f, 5f)
-        verticalLineTo(20f)
-        horizontalLineTo(10f)
-        close()
-        
-        // Bar 3
-        moveTo(16f, 9f)
-        curveTo(16f, 8.5f, 16.5f, 8f, 17f, 8f)
-        horizontalLineTo(19f)
-        curveTo(19.5f, 8f, 20f, 8.5f, 20f, 9f)
-        verticalLineTo(20f)
-        horizontalLineTo(16f)
-        close()
+    ).apply {
+        path(
+            stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+            strokeLineWidth = 4f,
+            strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round
+        ) {
+            moveTo(6f, 20f)
+            lineTo(6f, 13f)
+            moveTo(12f, 20f)
+            lineTo(12f, 7f)
+            moveTo(18f, 20f)
+            lineTo(18f, 11f)
+        }
     }.build()
 
 val CategoriesIcon: ImageVector
@@ -1577,20 +1793,32 @@ val CategoriesIcon: ImageVector
         defaultHeight = 24.dp,
         viewportWidth = 24f,
         viewportHeight = 24f
-    ).path(
-        stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
-        strokeLineWidth = 2f
-    ) {
-        moveTo(12f, 4f)
-        curveTo(16.4f, 4f, 20f, 7.6f, 20f, 12f)
-        curveTo(20f, 16.4f, 16.4f, 20f, 12f, 20f)
-        curveTo(7.6f, 20f, 4f, 16.4f, 4f, 12f)
-        curveTo(4f, 7.6f, 7.6f, 4f, 12f, 4f)
-        close()
-        moveTo(12f, 12f)
-        lineTo(12f, 4f)
-        moveTo(12f, 12f)
-        lineTo(18f, 16f)
+    ).apply {
+        path(
+            stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+            strokeLineWidth = 2f,
+            strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round
+        ) {
+            moveTo(12f, 3f)
+            curveTo(16.97f, 3f, 21f, 7.03f, 21f, 12f)
+            curveTo(21f, 16.97f, 16.97f, 21f, 12f, 21f)
+            curveTo(7.03f, 21f, 3f, 16.97f, 3f, 12f)
+            curveTo(3f, 7.03f, 7.03f, 3f, 12f, 3f)
+            close()
+        }
+        path(
+            stroke = androidx.compose.ui.graphics.SolidColor(Color.Black),
+            strokeLineWidth = 2f,
+            strokeLineCap = androidx.compose.ui.graphics.StrokeCap.Round,
+            strokeLineJoin = androidx.compose.ui.graphics.StrokeJoin.Round
+        ) {
+            moveTo(12f, 12f)
+            lineTo(12f, 3f)
+            moveTo(12f, 12f)
+            lineTo(18.5f, 15.5f)
+            moveTo(12f, 12f)
+            lineTo(6.5f, 16.5f)
+        }
     }.build()
 
 val CategoriesFilledIcon: ImageVector
@@ -1602,19 +1830,20 @@ val CategoriesFilledIcon: ImageVector
         viewportHeight = 24f
     ).apply {
         path(fill = androidx.compose.ui.graphics.SolidColor(Color.Black)) {
-            moveTo(12f, 12f)
-            lineTo(12f, 2f)
-            curveTo(6.48f, 2f, 2f, 6.48f, 2f, 12f)
-            curveTo(2f, 17.52f, 6.48f, 22f, 12f, 22f)
-            curveTo(17.52f, 22f, 22f, 17.52f, 22f, 12f)
-            curveTo(22f, 11f, 21.8f, 10f, 21.5f, 9f)
-            lineTo(12f, 12f)
+            moveTo(11.5f, 12.5f)
+            lineTo(5.5f, 16.5f)
+            curveTo(7.0f, 19.5f, 10.0f, 21f, 12.5f, 21f)
+            curveTo(17.5f, 21f, 20.5f, 17.5f, 20.5f, 12.5f)
+            curveTo(20.5f, 10.0f, 19.5f, 7.5f, 17.5f, 6.0f)
+            lineTo(11.5f, 12.5f)
             close()
         }
         path(fill = androidx.compose.ui.graphics.SolidColor(Color.Black)) {
-            moveTo(13.5f, 10.5f)
-            lineTo(22f, 7.5f)
-            curveTo(21f, 5f, 19f, 3f, 16.5f, 2f)
+            moveTo(12.5f, 11.5f)
+            lineTo(18.5f, 5.0f)
+            curveTo(15.5f, 2.5f, 11.5f, 2.5f, 8.5f, 5.0f)
+            curveTo(6.0f, 7.0f, 5.0f, 10.0f, 5.0f, 12.5f)
+            lineTo(12.5f, 11.5f)
             close()
         }
     }.build()

@@ -50,7 +50,7 @@ object ShieldStatsManager {
     // ── Block category classification ────────────────────────────────────────
 
     enum class BlockCategory {
-        AD, TRACKER, ANALYTICS, MALWARE, TELEMETRY, SOCIAL, OTHER
+        AD, TRACKER, ANALYTICS, MALWARE, TELEMETRY, SOCIAL, OTT, DOH, MINER, SPAM, OTHER
     }
 
     private val AD_KEYWORDS = listOf(
@@ -72,7 +72,8 @@ object ShieldStatsManager {
 
     private val ANALYTICS_KEYWORDS = listOf(
         "google-analytics", "googletagmanager", "analytics",
-        "stats.", "statcounter", "newrelic", "flurry", "omtrdc", "demdex"
+        "stats.", "statcounter", "newrelic", "flurry", "omtrdc", "demdex",
+        "clevertap"
     )
 
     private val TELEMETRY_KEYWORDS = listOf(
@@ -86,6 +87,30 @@ object ShieldStatsManager {
         "fbcdn", "graph.facebook"
     )
 
+    private val MALWARE_KEYWORDS = listOf(
+        "malware", "phishing", "virus", "spyware", "trojan", "ransomware", "hack", "exploit"
+    )
+
+    private val OTT_KEYWORDS = listOf(
+        "hotstar", "jiocinema", "viacom18", "mxplay", "mxplayer", "spotify", "netflix",
+        "primevideo", "disneyplus", "hulu", "peacocktv", "zee5", "sonyliv", "voot",
+        "bifrost", "conviva"
+    )
+
+    private val DOH_KEYWORDS = listOf(
+        "dns.google", "dns.cloudflare", "cloudflare-dns", "quad9", "nextdns",
+        "adguard-dns", "controld", "cleanbrowsing", "one.one.one.one"
+    )
+
+    private val MINER_KEYWORDS = listOf(
+        "miner", "coinhive", "cryptonight", "crypto-loot", "webmine"
+    )
+
+    private val SPAM_KEYWORDS = listOf(
+        "spam", "clickbank", "popads", "popunder", "adcash", "propellerads",
+        "revenuehits", "bidvertiser"
+    )
+
     /**
      * Classify a domain into a [BlockCategory] by checking whether it contains
      * any of the known ad / tracker / analytics keywords.
@@ -93,6 +118,11 @@ object ShieldStatsManager {
     fun categorize(domain: String): BlockCategory {
         val lower = domain.lowercase()
         return when {
+            DOH_KEYWORDS.any { lower.contains(it) } -> BlockCategory.DOH
+            OTT_KEYWORDS.any { lower.contains(it) } -> BlockCategory.OTT
+            MALWARE_KEYWORDS.any { lower.contains(it) } -> BlockCategory.MALWARE
+            MINER_KEYWORDS.any { lower.contains(it) } -> BlockCategory.MINER
+            SPAM_KEYWORDS.any { lower.contains(it) } -> BlockCategory.SPAM
             AD_KEYWORDS.any { lower.contains(it) } -> BlockCategory.AD
             TRACKER_KEYWORDS.any { lower.contains(it) } -> BlockCategory.TRACKER
             ANALYTICS_KEYWORDS.any { lower.contains(it) } -> BlockCategory.ANALYTICS

@@ -845,9 +845,9 @@ fun ProtectionLevelCard(
     val isLightTheme = LocalIsLightTheme.current
 
     val sliderColor = when (level) {
-        ProtectionLevel.TRACKER_ONLY    -> Color(0xFF34C759)
+        ProtectionLevel.TRACKER_ONLY    -> Color(0xFFFF2D55)
         ProtectionLevel.TRACKER_AND_ADS -> Color(0xFFFF9500)
-        ProtectionLevel.ENHANCED        -> Color(0xFF2DDE8F)
+        ProtectionLevel.ENHANCED        -> Color(0xFF34C759)
     }
 
     val levels = ProtectionLevel.entries
@@ -898,24 +898,17 @@ fun ProtectionLevelCard(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(20.dp))
                                 .background(
-                                    if (isEnhancedSelected) Color(0xFFFF2D55).copy(alpha = if (isLightTheme) 0.18f else 0.25f)
+                                    if (isEnhancedSelected) Color(0xFF34C759).copy(alpha = if (isLightTheme) 0.18f else 0.25f)
                                     else if (isSelected) sliderColor.copy(alpha = if (isLightTheme) 0.15f else 0.20f)
                                     else Color.Transparent
                                 )
                                 .padding(horizontal = 12.dp, vertical = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(4.dp)
-                            ) {
-                                if (isEnhancedSelected) {
-                                    Text(text = "❤️", fontSize = 11.sp)
-                                }
                                 Text(
                                     text = label,
                                     fontSize = 11.sp,
-                                    color = if (isEnhancedSelected) Color(0xFFFF2D55) else if (isSelected) sliderColor else Color.Gray,
+                                    color = if (isEnhancedSelected) Color(0xFFFFFFFF) else if (isSelected) sliderColor else Color.Gray,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal
                                 )
                             }
@@ -925,7 +918,6 @@ fun ProtectionLevelCard(
             }
         }
     }
-}
 
 @Composable
 fun InAppTrackerProtectionCard(

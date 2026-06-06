@@ -64,6 +64,8 @@ import com.kyant.backdrop.highlight.Highlight
 import com.kyant.backdrop.shadow.InnerShadow
 import com.kyant.backdrop.shadow.Shadow
 import com.kyant.shapes.Capsule
+import com.kyant.backdrop.catalog.components.LiquidBottomTab
+import com.kyant.backdrop.catalog.components.LocalLiquidBottomTabScale
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.drop
@@ -388,37 +390,6 @@ val ChevronLeftIcon: ImageVector
         lineTo(16f, 20f)
     }.build()
 
-// LiquidBottomTab Scale CompositionLocal
-internal val LocalLiquidBottomTabScale = staticCompositionLocalOf { { 1f } }
-
-@Composable
-fun RowScope.LiquidBottomTab(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-    content: @Composable ColumnScope.() -> Unit
-) {
-    val scale = LocalLiquidBottomTabScale.current
-    Column(
-        modifier
-            .clip(Capsule())
-            .clickable(
-                interactionSource = null,
-                indication = null,
-                role = Role.Tab,
-                onClick = onClick
-            )
-            .fillMaxHeight()
-            .weight(1f)
-            .graphicsLayer {
-                val scaleValue = scale()
-                scaleX = scaleValue
-                scaleY = scaleValue
-            },
-        verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        content = content
-    )
-}
 
 // LiquidBottomTabs
 @Composable
