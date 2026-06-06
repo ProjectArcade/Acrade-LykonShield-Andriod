@@ -356,8 +356,20 @@ class LykonVpnService : VpnService() {
             return
         }
 
-        val shouldBlock = AdblockEngine.shouldBlockDomain(domain, packageName)
-        Log.d(TAG, "DNS Query from $packageName: $domain -> shouldBlock = $shouldBlock")
+        val prefs = applicationContext.getSharedPreferences("lykon_shield_prefs", android.content.Context.MODE_PRIVATE)
+        val protectionLevel = prefs.getString("protection_level", "TRACKER_AND_ADS") ?: "TRACKER_AND_ADS"
+
+        var shouldBlock = AdblockEngine.shouldBlockDomain(domain, packageName)
+
+        if (shouldBlock && !AdblockEngine.isDoHProvider(domain)) {
+            val category = AdblockEngine.categorize(domain)
+            if (protectionLevel == "TRACKER_ONLY" && category == AdblockEngine.BlockCategory.AD) {
+                shouldBlock = false
+                Log.d(TAG, "Allowed domain $domain despite blocklist because protection level is TRACKER_ONLY")
+            }
+        }
+
+        Log.d(TAG, "DNS Query from $packageName: $domain -> shouldBlock = $shouldBlock (level=$protectionLevel)")
 
         if (shouldBlock) {
             val response = when (queryType) {

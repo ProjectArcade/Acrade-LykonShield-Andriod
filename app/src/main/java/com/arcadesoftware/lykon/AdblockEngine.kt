@@ -330,7 +330,15 @@ object AdblockEngine {
     // ==========================================================================
 
     private fun loadAllFilters(context: Context, blocked: MutableSet<String>, allowed: MutableSet<String>) {
-        val allFiles = FILTER_FILES + EXTRA_FILTER_FILES
+        val prefs = context.getSharedPreferences("lykon_shield_prefs", Context.MODE_PRIVATE)
+        val level = prefs.getString("protection_level", "TRACKER_AND_ADS") ?: "TRACKER_AND_ADS"
+        
+        var allFiles = FILTER_FILES + EXTRA_FILTER_FILES
+        if (level == "TRACKER_ONLY") {
+            allFiles = allFiles.filter { it != "easylist.txt" && it != "peter-lowe.txt" }
+            Log.d(TAG, "TRACKER_ONLY mode: excluding easylist.txt and peter-lowe.txt")
+        }
+
         for (file in allFiles) {
             try {
                 val storageFile = File(context.filesDir, "$FILTERS_DIR/$file")
@@ -348,7 +356,14 @@ object AdblockEngine {
     }
 
     private fun loadFilterTexts(context: Context): List<String> {
-        val allFiles = FILTER_FILES + EXTRA_FILTER_FILES
+        val prefs = context.getSharedPreferences("lykon_shield_prefs", Context.MODE_PRIVATE)
+        val level = prefs.getString("protection_level", "TRACKER_AND_ADS") ?: "TRACKER_AND_ADS"
+        
+        var allFiles = FILTER_FILES + EXTRA_FILTER_FILES
+        if (level == "TRACKER_ONLY") {
+            allFiles = allFiles.filter { it != "easylist.txt" && it != "peter-lowe.txt" }
+        }
+
         val filters = mutableListOf<String>()
         for (file in allFiles) {
             try {

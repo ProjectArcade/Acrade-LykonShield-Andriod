@@ -221,11 +221,15 @@ class MainActivity : ComponentActivity() {
                     }
                 }
                 var protectionLevel by remember { mutableStateOf(initialProtectionLevel) }
+                val context = androidx.compose.ui.platform.LocalContext.current
                 LaunchedEffect(protectionLevel) {
+                    val wasChanged = prefs.getString("protection_level", "") != protectionLevel.name
                     prefs.edit().putString("protection_level", protectionLevel.name).apply()
+                    if (wasChanged) {
+                        AdblockEngine.reloadFilters(context)
+                    }
                 }
 
-                val context = androidx.compose.ui.platform.LocalContext.current
                 val vpnLauncher = rememberLauncherForActivityResult(
                     contract = ActivityResultContracts.StartActivityForResult()
                 ) { result ->
