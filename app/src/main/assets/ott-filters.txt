@@ -5,9 +5,9 @@
 !          hagezi/dns-blocklists, AdGuardSDNSFilter
 ! Maintainer: ProjectArcade / Lykon Shield
 ! Homepage: https://github.com/ProjectArcade/Arcade-Lykon
-! License: GLP 3.0
-! Version: 3.0.0
-! Updated: 2025-06-06
+! License: GPL 3.0
+! Version: 3.1.0
+! Updated: 2026-06-08
 ! Syntax: Adblock Plus / adblock-rust (Lykon Shield)
 !
 
@@ -126,6 +126,8 @@
 ||audio-ads.spotify.com^
 ||ads-fa.spotify.com^
 ||heads-ec.spotify.com^
+||heads-fa-tls13.spotifycdn.com^
+||heads-fa.spotifycdn.com^
 
 ! --- Ad event tracking (fires on every ad impression) ---
 ||adeventtracker.spotify.com^
@@ -153,6 +155,14 @@
 ||pagead2.googlesyndication.com^$domain=spotify.com
 ||securepubads.g.doubleclick.net^$domain=spotify.com
 ||s0.2mdn.net^$domain=spotify.com
+||adsrvr.org^
+||adsafeprotected.com^
+||ade.googlesyndication.com^
+||media.net^$domain=spotify.com
+||adnxs.com^$domain=spotify.com
+||rubiconproject.com^$domain=spotify.com
+||openx.net^$domain=spotify.com
+||casalemedia.com^$domain=spotify.com
 
 !===========================================================
 ! SONYLIV
@@ -340,10 +350,10 @@
 ||crashlytics.com^
 ||app-measurement.com^
 ||firebaselogging-pa.googleapis.com^
-||firebase.googleapis.com^$xmlhttprequest,third-party
+||firebase.googleapis.com^$third-party
 
 ! --- Sentry (crash reporting) ---
-||sentry.io^$xmlhttprequest,third-party
+||sentry.io^$third-party
 
 ! --- MOAT / Oracle Advertising (ad verification — fires on every video ad) ---
 ||js.moatads.com^

@@ -8,7 +8,7 @@ import org.json.JSONObject
 import java.net.URL
 
 object AppConfigManager {
-    private const val CONFIG_URL = "https://cdn.jsdelivr.net/gh/ProjectArcade/Acrade-LykonShield-list@main/version.json"
+    private const val CONFIG_URL = "https://raw.githubusercontent.com/ProjectArcade/Acrade-LykonShield-list/main/version.json"
     
     var requiresHardUpdate = false
     var requiresSoftUpdate = false

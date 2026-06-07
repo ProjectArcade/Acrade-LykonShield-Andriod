@@ -88920,7 +88920,7 @@ gamcore.com##li.d-md-block > a[rel]
 @@||apv-launcher.minute.ly/api/$script
 @@||archive.org/BookReader/$image,~third-party,xmlhttprequest
 @@||archive.org/services/$image,~third-party,xmlhttprequest
-@@||assets.ctfassets.net^$media,domain=ads.spotify.com
+||assets.ctfassets.net^$media,domain=ads.spotify.com
 @@||assets.strossle.com^*/strossle-widget-sdk.js$script,domain=kaaoszine.fi
 @@||at.adtech.redventures.io/lib/api/$xmlhttprequest,domain=gamespot.com|giantbomb.com|metacritic.com
 @@||at.adtech.redventures.io/lib/dist/$script,domain=gamespot.com|giantbomb.com|metacritic.com
@@ -89250,7 +89250,7 @@ gamcore.com##li.d-md-block > a[rel]
 @@||notion.so^$generichide
 @@||oisd.nl^$generichide
 @@||onedrive.live.com^$generichide
-@@||open.spotify.com^$generichide
+||open.spotify.com^$generichide
 @@||pandora.com^$generichide
 @@||paramountplus.com^$generichide
 @@||peacocktv.com^$generichide
@@ -89584,7 +89584,7 @@ gamcore.com##li.d-md-block > a[rel]
 @@||ads.pinterest.com^$popup
 @@||ads.shopee.*/$popup
 @@||ads.snapchat.com^$popup
-@@||ads.spotify.com^$popup
+||ads.spotify.com^$popup
 @@||ads.taboola.com^$popup
 @@||ads.tiktok.com^$popup
 @@||ads.twitter.com^$popup

@@ -22,6 +22,8 @@
         <item>Is this project open-source?</item>
         <item>How can I support the project?</item>
         <item>Does Lykon Shield inspect my HTTPS traffic?</item>
+        <item>Why do some music streaming apps still play audio ads?</item>
+        <item>Can you use HTTP inspection to block these in-stream ads?</item>
     </string-array>
 
     <string-array name="faq_answers">
@@ -44,6 +46,8 @@
         <item>Yes, Lykon Shield is fully open-source and hosted on GitHub under the GPL-3.0 license. The source code is owned by the organization ProjectArcade.</item>
         <item>You can support the project by contributing code, reporting bugs on our official repository, or sharing Lykon Shield with your family and friends.</item>
         <item>No. Lykon Shield functions purely as a DNS resolver/blocker. It only filters domain name requests (like ads.example.com) and does not decrypt or inspect your actual network traffic content.</item>
+        <item>Some major platforms use a unified Content Delivery Network (CDN) to serve both legitimate media and audio ads from the exact same servers. Because Lykon Shield is a DNS blocker, blocking these domains to stop ads will also completely break the media playback. We are actively researching workarounds to filter these unified CDN ads without disrupting playback. However, visual ads and trackers on these platforms are successfully blocked.</item>
+        <item>No. Modern Android versions and secure apps use Certificate Pinning. If a VPN attempts to perform Man-In-The-Middle (MITM) SSL decryption to inspect HTTP traffic, the app will instantly refuse to connect. A VPN-based blocker sits outside the app and can only inspect domain names, not the encrypted content itself.</item>
     </string-array>
 
     <string-array name="floating_emojis">
