@@ -222,11 +222,29 @@ class MainActivity : ComponentActivity() {
                 }
                 var protectionLevel by remember { mutableStateOf(initialProtectionLevel) }
                 val context = androidx.compose.ui.platform.LocalContext.current
+
+                val permissionLauncher = rememberLauncherForActivityResult(
+                    contract = ActivityResultContracts.RequestPermission()
+                ) {}
+
+                LaunchedEffect(Unit) {
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
+                        val permissionState = androidx.core.content.ContextCompat.checkSelfPermission(
+                            context, android.Manifest.permission.POST_NOTIFICATIONS
+                        )
+                        if (permissionState != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                            permissionLauncher.launch(android.Manifest.permission.POST_NOTIFICATIONS)
+                        }
+                    }
+                }
+
                 LaunchedEffect(protectionLevel) {
                     val wasChanged = prefs.getString("protection_level", "") != protectionLevel.name
                     prefs.edit().putString("protection_level", protectionLevel.name).apply()
                     if (wasChanged) {
-                        AdblockEngine.reloadFilters(context)
+                        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                            AdblockEngine.reloadFilters(context)
+                        }
                     }
                 }
 

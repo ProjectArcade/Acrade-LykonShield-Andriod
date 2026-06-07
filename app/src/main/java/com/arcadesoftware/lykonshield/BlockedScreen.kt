@@ -1232,59 +1232,15 @@ fun AppDetailPopupContent(
 ) {
     val contentColor = if (isLightTheme) Color.Black else Color.White
     
-    var appCategoryCounts by remember { mutableStateOf<Map<ShieldStatsManager.BlockCategory, Int>>(emptyMap()) }
-    var appTopDomains by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
-
-    LaunchedEffect(app.packageName, ShieldStatsManager.recentBlocks.size) {
-        withContext(Dispatchers.IO) {
-            val filtered = ShieldStatsManager.recentBlocks.filter { it.packageName == app.packageName }
-            
-            val catMap = filtered.groupBy { it.category }
-                .mapValues { it.value.size }
-            
-            val domainMap = filtered.groupBy { it.domain }
-                .mapValues { it.value.size }
-                .toList()
-                .sortedByDescending { it.second }
-                .take(5)
-                
-            withContext(Dispatchers.Main) {
-                appCategoryCounts = catMap
-                appTopDomains = domainMap
-            }
-        }
-    }
-
     val totalAppBlocks = app.count
-    val finalCategoryCounts = remember(appCategoryCounts, totalAppBlocks) {
-        if (appCategoryCounts.isNotEmpty()) {
-            appCategoryCounts
-        } else {
-            val hash = abs(app.packageName.hashCode())
-            val adShare = (hash % 30) + 15
-            val trackerShare = ((hash / 10) % 30) + 25
-            val analyticsShare = 100 - adShare - trackerShare
-            mapOf(
-                ShieldStatsManager.BlockCategory.AD to (totalAppBlocks * adShare / 100).coerceAtLeast(0),
-                ShieldStatsManager.BlockCategory.TRACKER to (totalAppBlocks * trackerShare / 100).coerceAtLeast(0),
-                ShieldStatsManager.BlockCategory.ANALYTICS to (totalAppBlocks * analyticsShare / 100).coerceAtLeast(0)
-            ).filterValues { it > 0 }
-        }
+    val finalCategoryCounts = remember(totalAppBlocks) {
+        ShieldStatsManager.appCategoryMap[app.packageName] ?: emptyMap()
     }
 
-    val finalTopDomains = remember(appTopDomains) {
-        if (appTopDomains.isNotEmpty()) {
-            appTopDomains
-        } else {
-            val domainBase = app.packageName.substringAfterLast('.')
-            listOf(
-                "telemetry.$domainBase.com" to (totalAppBlocks * 45 / 100).coerceAtLeast(1),
-                "analytics.google.com" to (totalAppBlocks * 25 / 100).coerceAtLeast(1),
-                "api.$domainBase.org" to (totalAppBlocks * 15 / 100).coerceAtLeast(1),
-                "doubleclick.net" to (totalAppBlocks * 10 / 100).coerceAtLeast(1),
-                "crashlytics-reports.com" to (totalAppBlocks * 5 / 100).coerceAtLeast(1)
-            ).take(if (totalAppBlocks >= 5) 5 else totalAppBlocks.coerceAtLeast(1))
-        }
+    val finalTopDomains = remember(totalAppBlocks) {
+        ShieldStatsManager.appTopDomainsMap[app.packageName]?.toList()
+            ?.sortedByDescending { it.second }
+            ?.take(5) ?: emptyList()
     }
 
     val categoryColors = remember {
@@ -1580,11 +1536,14 @@ fun AppDetailPopupContent(
                 fontWeight = FontWeight.Bold
             )
 
-            Column(
-                modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(0.dp)
-            ) {
-                finalTopDomains.forEachIndexed { index, (domain, count) ->
+            if (finalTopDomains.isEmpty()) {
+                Text("No detailed data yet.", color = Color.Gray, fontSize = 11.sp)
+            } else {
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(0.dp)
+                ) {
+                    finalTopDomains.forEachIndexed { index, (domain, count) ->
                     if (index > 0) {
                         Box(
                             modifier = Modifier
@@ -1672,6 +1631,7 @@ fun AppDetailPopupContent(
                     }
                 }
             }
+        }
         }
 
         // Close Button

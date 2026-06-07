@@ -40,7 +40,8 @@ object FilterListUpdater {
         AdblockEngine.FilterSources.EASYPRIVACY_URL to "easyprivacy.txt",
         AdblockEngine.FilterSources.UBLOCK_FILTERS_URL to "ublock-filters.txt",
         AdblockEngine.FilterSources.PETER_LOWE_URL to "peter-lowe.txt",
-        AdblockEngine.FilterSources.OISD_URL to "oisd-basic.txt"
+        AdblockEngine.FilterSources.OISD_URL to "oisd-basic.txt",
+        "https://cdn.jsdelivr.net/gh/ProjectArcade/Arcade-Lykon-Shield-list@main/ott-filters.txt" to "ott-filters.txt"
     )
 
     /**

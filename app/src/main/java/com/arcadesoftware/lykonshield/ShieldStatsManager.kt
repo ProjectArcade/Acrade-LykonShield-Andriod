@@ -188,6 +188,12 @@ object ShieldStatsManager {
     /** Per-category block counts: categoryName -> blockCount. */
     val categoryBlockCounts = mutableStateMapOf<String, Int>()
 
+    /** Per-app top domains block counts: packageName -> domain -> count. */
+    val appTopDomainsMap = mutableStateMapOf<String, MutableMap<String, Int>>()
+
+    /** Per-app category block counts: packageName -> category -> count. */
+    val appCategoryMap = mutableStateMapOf<String, MutableMap<BlockCategory, Int>>()
+
     /**
      * Graph data: each pair is (bucketTimestamp, count).
      * Buckets are [GRAPH_BUCKET_SECONDS]-second windows covering up to
@@ -281,6 +287,36 @@ object ShieldStatsManager {
                     }
                 }
 
+                // Restore per-app detailed stats
+                try {
+                    val topDomainsString = p.getString("app_top_domains_v2", "{}") ?: "{}"
+                    val topDomainsObj = org.json.JSONObject(topDomainsString)
+                    appTopDomainsMap.clear()
+                    topDomainsObj.keys().forEach { pkg ->
+                        val domainsObj = topDomainsObj.getJSONObject(pkg)
+                        val domainsMap = mutableMapOf<String, Int>()
+                        domainsObj.keys().forEach { domain ->
+                            domainsMap[domain] = domainsObj.getInt(domain)
+                        }
+                        appTopDomainsMap[pkg] = domainsMap
+                    }
+                } catch (e: Exception) { Log.e(TAG, "Failed to restore top domains", e) }
+
+                try {
+                    val categoriesString = p.getString("app_categories_v2", "{}") ?: "{}"
+                    val categoriesObj = org.json.JSONObject(categoriesString)
+                    appCategoryMap.clear()
+                    categoriesObj.keys().forEach { pkg ->
+                        val catsObj = categoriesObj.getJSONObject(pkg)
+                        val catsMap = mutableMapOf<BlockCategory, Int>()
+                        catsObj.keys().forEach { catStr ->
+                            try {
+                                catsMap[BlockCategory.valueOf(catStr)] = catsObj.getInt(catStr)
+                            } catch (_: Exception) {}
+                        }
+                        appCategoryMap[pkg] = catsMap
+                    }
+                } catch (e: Exception) { Log.e(TAG, "Failed to restore categories", e) }
             }
         }
     }
@@ -321,6 +357,22 @@ object ShieldStatsManager {
 
             val categoryString = categoryBlockCounts.entries.joinToString(",") { "${it.key}:${it.value}" }
             putString(KEY_CATEGORY_BLOCKS, categoryString)
+
+            val topDomainsObj = org.json.JSONObject()
+            appTopDomainsMap.forEach { (pkg, domains) ->
+                val domainsObj = org.json.JSONObject()
+                domains.forEach { (d, c) -> domainsObj.put(d, c) }
+                topDomainsObj.put(pkg, domainsObj)
+            }
+            putString("app_top_domains_v2", topDomainsObj.toString())
+
+            val categoriesObj = org.json.JSONObject()
+            appCategoryMap.forEach { (pkg, cats) ->
+                val catsObj = org.json.JSONObject()
+                cats.forEach { (cat, c) -> catsObj.put(cat.name, c) }
+                categoriesObj.put(pkg, catsObj)
+            }
+            putString("app_categories_v2", categoriesObj.toString())
 
             apply()
         }
@@ -363,7 +415,7 @@ object ShieldStatsManager {
     }
 
     fun recordBlock(context: Context, domain: String, category: BlockCategory) {
-        val packageName = getActiveAppPackage(context) ?: "system"
+        val packageName = "system"
         recordBlock(context, domain, category, packageName)
     }
 
@@ -398,6 +450,17 @@ object ShieldStatsManager {
             // ── Per-app & per-domain maps ────────────────────────────────
             appBlockCounts[packageName] = (appBlockCounts[packageName] ?: 0) + 1
             domainBlockCounts[domain] = (domainBlockCounts[domain] ?: 0) + 1
+
+            // ── Per-app detailed tracking (bounded) ────────────────────────
+            val domains = appTopDomainsMap.getOrPut(packageName) { mutableMapOf() }
+            domains[domain] = (domains[domain] ?: 0) + 1
+            if (domains.size > 20) {
+                val lowest = domains.entries.minByOrNull { it.value }?.key
+                if (lowest != null && lowest != domain) domains.remove(lowest)
+            }
+
+            val cats = appCategoryMap.getOrPut(packageName) { mutableMapOf() }
+            cats[category] = (cats[category] ?: 0) + 1
 
             // ── Recent blocks (newest first, capped) ─────────────────────
             recentBlocks.add(0, BlockedEntry(domain, packageName, appName, category))
@@ -443,23 +506,6 @@ object ShieldStatsManager {
     }
 
     // ── Helpers ──────────────────────────────────────────────────────────────
-
-    private fun getActiveAppPackage(context: Context): String? {
-        return try {
-            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as ActivityManager
-            @Suppress("DEPRECATION")
-            val runningTasks = am.getRunningTasks(3)
-            runningTasks.firstOrNull { task ->
-                val pkg = task.topActivity?.packageName
-                pkg != null &&
-                    pkg != context.packageName &&
-                    pkg != "com.google.android.inputmethod.latin"
-            }?.topActivity?.packageName
-        } catch (_: Exception) {
-            // SecurityException or other permission restrictions
-            null
-        }
-    }
 
     private val appNameCache = java.util.concurrent.ConcurrentHashMap<String, String>()
 

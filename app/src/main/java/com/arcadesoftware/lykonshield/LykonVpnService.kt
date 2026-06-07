@@ -58,9 +58,13 @@ class LykonVpnService : VpnService() {
             "94.140.14.14", "94.140.15.15",            // AdGuard DNS
             "185.228.168.168", "185.228.169.168",      // CleanBrowsing
             "76.76.2.0", "76.76.10.0",                 // ControlD
+            "194.242.2.2", "194.242.2.3",              // Mullvad
             "104.16.248.249", "104.16.249.249",        // Cloudflare DoH CDN
             "76.223.122.150", "13.107.42.14"           // NextDNS, Microsoft
         )
+
+        class AppAlertStats(var recentBlocks: Int = 0, var recentTotal: Int = 0, var lastNotified: Long = 0L)
+        private val appAlertStatsMap = java.util.concurrent.ConcurrentHashMap<String, AppAlertStats>()
 
         // Known DoH/DoT provider IPs (IPv6) to intercept and block/drop
         private val DOH_PROVIDER_IPS_IPV6 = setOf(
@@ -357,6 +361,12 @@ class LykonVpnService : VpnService() {
         }
 
         val prefs = applicationContext.getSharedPreferences("lykon_shield_prefs", android.content.Context.MODE_PRIVATE)
+        val excludedApps = prefs.getStringSet("excluded_apps", emptySet()) ?: emptySet()
+        if (packageName in excludedApps) {
+            forwardDnsQuery(requestPacket, ipHeaderLen, udpHeaderLen, outputStream)
+            return
+        }
+
         val protectionLevel = prefs.getString("protection_level", "TRACKER_AND_ADS") ?: "TRACKER_AND_ADS"
 
         var shouldBlock = AdblockEngine.shouldBlockDomain(domain, packageName)
@@ -383,10 +393,67 @@ class LykonVpnService : VpnService() {
 
             writeToTun(outputStream, response)
             ShieldStatsManager.recordBlockWithApp(applicationContext, domain, packageName)
+            checkAndNotifyAppBlockRate(packageName, true, protectionLevel)
         } else {
             forwardDnsQuery(requestPacket, ipHeaderLen, udpHeaderLen, outputStream)
             ShieldStatsManager.recordTraffic(applicationContext, domain, packageName, isBlocked = false)
+            checkAndNotifyAppBlockRate(packageName, false, protectionLevel)
         }
+    }
+
+    private fun checkAndNotifyAppBlockRate(packageName: String, isBlocked: Boolean, protectionLevel: String) {
+        if (packageName == "system") return
+        if (protectionLevel == "TRACKER_ONLY") return
+
+        val stats = appAlertStatsMap.getOrPut(packageName) { AppAlertStats() }
+        synchronized(stats) {
+            stats.recentTotal++
+            if (isBlocked) stats.recentBlocks++
+
+            if (stats.recentTotal >= 50) {
+                // If 90% of the last 50 queries are blocked
+                if (stats.recentBlocks >= 45) {
+                    val now = System.currentTimeMillis()
+                    // Debounce: once per 12 hours
+                    if (now - stats.lastNotified > 12 * 60 * 60 * 1000L) {
+                        stats.lastNotified = now
+                        showHighBlockRateNotification(packageName)
+                    }
+                }
+                // Reset window
+                stats.recentBlocks = 0
+                stats.recentTotal = 0
+            }
+        }
+    }
+
+    private fun showHighBlockRateNotification(packageName: String) {
+        val appName = try {
+            val pm = packageManager
+            @Suppress("DEPRECATION")
+            val info = pm.getApplicationInfo(packageName, 0)
+            pm.getApplicationLabel(info).toString()
+        } catch (_: Exception) {
+            packageName
+        }
+
+        val channelId = "lykon_alerts"
+        val nm = getSystemService(android.app.NotificationManager::class.java)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+            val channel = android.app.NotificationChannel(
+                channelId, "Shield Alerts", android.app.NotificationManager.IMPORTANCE_DEFAULT
+            )
+            nm.createNotificationChannel(channel)
+        }
+
+        val notification = NotificationCompat.Builder(this, channelId)
+            .setContentTitle("$appName might be restricted")
+            .setContentText("Decrease tracking protection. This app might not work properly in Enhanced Mode.")
+            .setSmallIcon(android.R.drawable.ic_lock_lock)
+            .setAutoCancel(true)
+            .build()
+
+        nm.notify(packageName.hashCode(), notification)
     }
 
     private fun forwardDnsQuery(
